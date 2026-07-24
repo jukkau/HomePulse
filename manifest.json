@@ -1,0 +1,9 @@
+{
+  "id": "yuki-homepage",
+  "name": "Yuki Homepage",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "A component-based homepage for Yuki with grid layout, drag editing, and custom dashboard widgets.",
+  "author": "OpenAI Codex",
+  "isDesktopOnly": false
+}

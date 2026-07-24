@@ -1,0 +1,26 @@
+{
+  "name": "yuki-homepage",
+  "version": "0.1.0",
+  "description": "A component-based Obsidian homepage dashboard for Yuki.",
+  "main": "main.js",
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "check": "tsc --noEmit",
+    "smoke": "node scripts/run-smoke.mjs"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "dashboard"
+  ],
+  "author": "OpenAI Codex",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "builtin-modules": "^5.0.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "^1.8.7",
+    "typescript": "^5.8.0"
+  }
+}
