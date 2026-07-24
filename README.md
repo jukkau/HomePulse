@@ -65,4 +65,4 @@ Daily、Task 与单篇输出不会进入能力地图。
 
 ## License
 
-UNLICENSED。发布前请根据实际开源意图补充许可证。
+MIT License. See [LICENSE](LICENSE).
