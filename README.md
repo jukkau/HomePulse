@@ -10,6 +10,10 @@
 - 自动生成能力地图：`Value → Area → Project`，从 Area 元数据与项目的 `area` 关联读取层级。
 - 项目位于 `10_Projects/进行中`，或同时带有 `type/project`、`status/ing` 标签时，会显示在能力地图中。
 
+## 配置
+
+插件设置中可修改首页名称、能力地图来源、Area 文件夹和活跃项目文件夹。Quick Actions 组件的设置支持按 `label|type|value` 编辑链接、Obsidian 命令和每日笔记入口；新安装不会预置个人 AI 服务链接。
+
 ## 安装
 
 将本目录放到 Obsidian Vault 的：

@@ -6,10 +6,12 @@ export const DEFAULT_DATA = {
     openOnStartup: true,
     lockHomepage: true,
     themePreset: "petal",
-    profileName: "Yuki",
-    profileSignature: "notes, thoughts & things that matter",
+    profileName: "Your name",
+    profileSignature: "A personal Obsidian homepage",
     obsidianStartDate: "",
-    techTreeSource: DEFAULT_TECH_TREE_SOURCE
+    techTreeSource: DEFAULT_TECH_TREE_SOURCE,
+    techTreeAreaRoot: "20_Areas",
+    techTreeActiveProjectRoot: "10_Projects/进行中"
   },
   layout: {
     columns: 5,
@@ -73,25 +75,16 @@ export const DEFAULT_DATA = {
     },
     "ai-main": {
       config: {
-        title: "launchers",
-        variant: "stack",
-        sectionTitle: "AI tools",
+        title: "quick actions",
+        variant: "grid",
+        sectionTitle: "",
         items: [
-          { label: "Grok", type: "url", value: "https://grok.com" },
-          { label: "Gemini", type: "url", value: "https://gemini.google.com" },
-          { label: "NotebookLM", type: "url", value: "https://notebooklm.google.com" },
-          { label: "Gmail", type: "url", value: "https://mail.google.com" },
-          { label: "Doubao", type: "url", value: "https://www.doubao.com" }
-        ],
-        secondaryTitle: "system",
-        secondaryItems: [
           { label: "daily", type: "daily-note", value: "" },
           { label: "search", type: "command", value: "global-search:open" },
-          { label: "graph", type: "command", value: "graph:open" },
-          { label: "new", type: "command", value: "file-explorer:new-file" },
-          { label: "quick", type: "command", value: "quickadd:runQuickAdd" },
-          { label: "cmds", type: "command", value: "command-palette:open" }
-        ]
+          { label: "commands", type: "command", value: "command-palette:open" }
+        ],
+        secondaryTitle: "",
+        secondaryItems: []
       },
       state: {}
     },

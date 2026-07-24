@@ -46,7 +46,10 @@ export const techTreeWidget = {
     let data = api.snapshot.techTree;
     const override = api.widgetData.config.sourcePath && normalizePath(api.widgetData.config.sourcePath);
     if (override && override !== normalizePath(api.plugin.data.settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE)) {
-      data = await readTechTreeData(api.app, override);
+      data = await readTechTreeData(api.app, override, {
+        areaRoot: api.plugin.data.settings.techTreeAreaRoot,
+        activeProjectRoot: api.plugin.data.settings.techTreeActiveProjectRoot
+      });
     }
     if (!data || data.error) {
       renderEmpty(container, data && data.error ? data.error : "No tech tree data available.");

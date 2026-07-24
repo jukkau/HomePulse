@@ -217,12 +217,14 @@ export function validateSettings(settings, defaults) {
     openOnStartup: typeof raw.openOnStartup === "boolean" ? raw.openOnStartup : Boolean(base.openOnStartup),
     lockHomepage: typeof raw.lockHomepage === "boolean" ? raw.lockHomepage : Boolean(base.lockHomepage),
     themePreset: asString(raw.themePreset, base.themePreset || "petal"),
-    profileName: asString(raw.profileName, base.profileName || "Yuki"),
-    profileSignature: asString(raw.profileSignature, base.profileSignature || "notes, thoughts & things that matter"),
+    profileName: asString(raw.profileName, base.profileName || "Your name"),
+    profileSignature: asString(raw.profileSignature, base.profileSignature || "A personal Obsidian homepage"),
     obsidianStartDate: /^\d{4}-\d{2}-\d{2}$/.test(asString(raw.obsidianStartDate))
       ? asString(raw.obsidianStartDate)
       : asString(base.obsidianStartDate, ""),
-    techTreeSource: asString(raw.techTreeSource, base.techTreeSource || "")
+    techTreeSource: asString(raw.techTreeSource, base.techTreeSource || ""),
+    techTreeAreaRoot: asString(raw.techTreeAreaRoot, base.techTreeAreaRoot || "20_Areas"),
+    techTreeActiveProjectRoot: asString(raw.techTreeActiveProjectRoot, base.techTreeActiveProjectRoot || "10_Projects/进行中")
   };
 }
 

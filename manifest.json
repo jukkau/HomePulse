@@ -3,7 +3,7 @@
   "name": "Yuki Homepage",
   "version": "0.1.0",
   "minAppVersion": "1.5.0",
-  "description": "A component-based homepage for Yuki with grid layout, drag editing, and custom dashboard widgets.",
-  "author": "OpenAI Codex",
+  "description": "A component-based Obsidian homepage with grid layout, drag editing, and dashboard widgets.",
+  "author": "Yuki",
   "isDesktopOnly": false
 }

@@ -196,7 +196,7 @@ class HeaderSettingsModal extends Modal {
     });
 
     const draft = {
-      profileName: this.plugin.data.settings.profileName || "Yuki",
+      profileName: this.plugin.data.settings.profileName || "Your name",
       profileSignature: this.plugin.data.settings.profileSignature || "",
       obsidianStartDate: this.plugin.data.settings.obsidianStartDate || "",
       lockHomepage: Boolean(this.plugin.data.settings.lockHomepage)
@@ -259,7 +259,7 @@ class HeaderSettingsModal extends Modal {
     const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: "Save" });
     cancel.addEventListener("click", () => this.close());
     save.addEventListener("click", async () => {
-      this.plugin.data.settings.profileName = draft.profileName.trim() || "Yuki";
+      this.plugin.data.settings.profileName = draft.profileName.trim() || "Your name";
       this.plugin.data.settings.profileSignature = draft.profileSignature.trim();
       this.plugin.data.settings.obsidianStartDate = draft.obsidianStartDate;
       this.plugin.data.settings.lockHomepage = draft.lockHomepage;
@@ -362,6 +362,32 @@ class YukiHomepageSettingTab extends PluginSettingTab {
         text.setValue(this.plugin.data.settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE);
         text.onChange(async (value) => {
           this.plugin.data.settings.techTreeSource = value.trim() || DEFAULT_TECH_TREE_SOURCE;
+          await this.plugin.persist();
+          this.plugin.refreshOpenViews();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName("Tech tree Area folder")
+      .setDesc("Vault-relative folder that contains notes with type: area.")
+      .addText((text) => {
+        text.setPlaceholder("20_Areas");
+        text.setValue(this.plugin.data.settings.techTreeAreaRoot || "20_Areas");
+        text.onChange(async (value) => {
+          this.plugin.data.settings.techTreeAreaRoot = value.trim() || "20_Areas";
+          await this.plugin.persist();
+          this.plugin.refreshOpenViews();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName("Tech tree active-project folder")
+      .setDesc("Vault-relative folder whose Project_* notes are treated as active.")
+      .addText((text) => {
+        text.setPlaceholder("10_Projects/进行中");
+        text.setValue(this.plugin.data.settings.techTreeActiveProjectRoot || "10_Projects/进行中");
+        text.onChange(async (value) => {
+          this.plugin.data.settings.techTreeActiveProjectRoot = value.trim() || "10_Projects/进行中";
           await this.plugin.persist();
           this.plugin.refreshOpenViews();
         });
@@ -473,7 +499,7 @@ class YukiHomepageView extends ItemView {
 
     const header = frame.createDiv({ cls: `yh-header ${this.editMode ? "is-editing" : ""}` });
     const brand = header.createDiv({ cls: "yh-brand" });
-    brand.createDiv({ cls: "yh-brand-title", text: this.plugin.data.settings.profileName || "Yuki" });
+    brand.createDiv({ cls: "yh-brand-title", text: this.plugin.data.settings.profileName || "Your name" });
     brand.createDiv({ cls: "yh-brand-subtitle", text: this.plugin.data.settings.profileSignature || "" });
 
     const clockBlock = header.createDiv({ cls: "yh-clock-block" });

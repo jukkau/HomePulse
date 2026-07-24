@@ -124,7 +124,11 @@ export class SnapshotBuilder {
   async loadTechTree(): Promise<void> {
     this.techTree = await readTechTreeData(
       this.app,
-      this.plugin.data.settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE
+      this.plugin.data.settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE,
+      {
+        areaRoot: this.plugin.data.settings.techTreeAreaRoot,
+        activeProjectRoot: this.plugin.data.settings.techTreeActiveProjectRoot
+      }
     );
   }
 

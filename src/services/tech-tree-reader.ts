@@ -5,8 +5,8 @@ const {
   normalizePath
 } = require("obsidian");
 
-const AREA_ROOT = "20_Areas";
-const ACTIVE_PROJECT_ROOT = "10_Projects/进行中";
+const DEFAULT_AREA_ROOT = "20_Areas";
+const DEFAULT_ACTIVE_PROJECT_ROOT = "10_Projects/进行中";
 
 const VALUE_GROUPS = [
   { id: "care-self", title: "照顾自己" },
@@ -83,8 +83,10 @@ function findAreaFile(app: any, sourceFile: any, linkpath: string, areaByKey: Ma
     || null;
 }
 
-export async function readTechTreeData(app: any, sourcePath: string) {
+export async function readTechTreeData(app: any, sourcePath: string, options: any = {}) {
   const path = normalizePath(sourcePath || DEFAULT_TECH_TREE_SOURCE);
+  const areaRoot = normalizePath(options.areaRoot || DEFAULT_AREA_ROOT);
+  const activeProjectRoot = normalizePath(options.activeProjectRoot || DEFAULT_ACTIVE_PROJECT_ROOT);
   const file = app.vault.getAbstractFileByPath(path);
   if (!(file instanceof TFile)) {
     return { error: `Tech tree source is missing: ${path}` };
@@ -92,7 +94,7 @@ export async function readTechTreeData(app: any, sourcePath: string) {
 
   const markdownFiles = app.vault.getMarkdownFiles();
   const areaFiles = markdownFiles.filter((candidate: any) => {
-    if (!withinFolder(candidate.path, AREA_ROOT)) return false;
+    if (!withinFolder(candidate.path, areaRoot)) return false;
     const frontmatter = getFrontmatter(app, candidate);
     return String(frontmatter.type || "").toLowerCase() === "area";
   });
@@ -136,7 +138,7 @@ export async function readTechTreeData(app: any, sourcePath: string) {
 
     // Keep the legacy active-project folder, and also allow active project
     // roots that stay in their own project directory.
-    return parentPath === normalizePath(ACTIVE_PROJECT_ROOT)
+    return parentPath === activeProjectRoot
       || hasProjectTags(getFrontmatter(app, candidate));
   });
 
