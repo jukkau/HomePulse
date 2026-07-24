@@ -63,6 +63,10 @@ Daily、Task 与单篇输出不会进入能力地图。
 
 `data.json` 保存个人首页配置、习惯记录与本地库路径，已被 `.gitignore` 排除。请不要提交自己的插件数据、Vault 内容、令牌或密钥。
 
+## 致谢
+
+本插件的视觉语言参考并改编自 **Dashboard-Komorebi.css**（木漏れ日 / Komorebi 风格），原始设计署名为 **InlitX**。本项目保留该设计来源声明；原文件的版权与许可状态仍以原作者的说明为准。
+
 ## License
 
 MIT License. See [LICENSE](LICENSE).

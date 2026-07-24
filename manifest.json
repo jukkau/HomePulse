@@ -1,7 +1,7 @@
 {
   "id": "yuki-homepage",
   "name": "Yuki Homepage",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minAppVersion": "1.5.0",
   "description": "A component-based Obsidian homepage with grid layout, drag editing, and dashboard widgets.",
   "author": "Yuki",
