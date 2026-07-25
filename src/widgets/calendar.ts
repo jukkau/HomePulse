@@ -2,7 +2,7 @@
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
 import { localDateKey } from "./widget-api";
 
-const { Notice, Setting } = require("obsidian");
+import { Notice, Setting } from "obsidian";
 
 export const calendarWidget = {
   type: "calendar",
@@ -13,11 +13,11 @@ export const calendarWidget = {
   defaultConfig: { title: "calendar" },
   defaultState: {},
   async render(container, api) {
-    const state = api.view.widgetUiState[api.widget.id] || {
-      year: api.snapshot.now.getFullYear(),
-      month: api.snapshot.now.getMonth()
-    };
-    api.view.widgetUiState[api.widget.id] = state;
+    const state = api.getUiState();
+    if (state.year === undefined) {
+      state.year = api.snapshot.now.getFullYear();
+      state.month = api.snapshot.now.getMonth();
+    }
     const nav = container.createDiv({ cls: "yh-calendar-nav" });
     const prev = nav.createEl("button", { text: "‹" });
     nav.createDiv({
@@ -31,7 +31,7 @@ export const calendarWidget = {
         state.month = 11;
         state.year -= 1;
       }
-      await api.view.renderView();
+      await api.requestRender();
     });
     next.addEventListener("click", async () => {
       state.month += 1;
@@ -39,7 +39,7 @@ export const calendarWidget = {
         state.month = 0;
         state.year += 1;
       }
-      await api.view.renderView();
+      await api.requestRender();
     });
     const head = container.createDiv({ cls: "yh-calendar-grid yh-calendar-head" });
     ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].forEach((day, index) => {
@@ -64,9 +64,10 @@ export const calendarWidget = {
       if (key === localDateKey(api.snapshot.now)) {
         cell.addClass("is-today");
       }
-      cell.createDiv({ cls: "yh-calendar-day", text: String(day) });
+      const dayLabel = cell.createDiv({ cls: "yh-calendar-day", text: String(day) });
+      dayLabel.setAttr("aria-hidden", "true");
+      const dots = cell.createDiv({ cls: "yh-calendar-dots" });
       if (notes.length) {
-        const dots = cell.createDiv({ cls: "yh-calendar-dots" });
         for (let i = 0; i < Math.min(notes.length, 3); i += 1) {
           dots.createDiv({ cls: "yh-calendar-dot" });
         }

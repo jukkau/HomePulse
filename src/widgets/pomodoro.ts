@@ -2,7 +2,65 @@
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
 import { formatSeconds, reconcilePomodoroState } from "./widget-api";
 
-const { Setting, setIcon } = require("obsidian");
+import { Modal, Setting, setIcon } from "obsidian";
+
+function clampMinutes(value, fallback, max) {
+  const next = Math.round(Number(value));
+  if (!Number.isFinite(next) || next < 1) return fallback;
+  return Math.min(max, next);
+}
+
+// Replaces the old window.prompt flow (disallowed by Obsidian review) with a
+// proper Modal, while keeping a quick settings entry on the widget face.
+class PomodoroSettingsModal extends Modal {
+  constructor(app, config, onSave) {
+    super(app);
+    this.config = config;
+    this.onSave = onSave;
+    this.draft = {
+      workMinutes: Number(config.workMinutes) || 25,
+      breakMinutes: Number(config.breakMinutes) || 5
+    };
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    this.modalEl.addClass("yh-settings-shell");
+    contentEl.empty();
+    contentEl.addClass("yh-modal", "yh-settings-modal");
+    contentEl.createEl("h2", { text: "Pomodoro settings" });
+    contentEl.createDiv({ cls: "yh-settings-subtitle", text: "Set the work and break lengths." });
+    const body = contentEl.createDiv({ cls: "yh-settings-body" });
+
+    new Setting(body).setName("Work minutes").addText((text) => {
+      text.inputEl.type = "number";
+      text.inputEl.min = "1";
+      text.inputEl.max = "180";
+      text.setValue(String(this.draft.workMinutes));
+      text.onChange((value) => {
+        this.draft.workMinutes = clampMinutes(value, 25, 180);
+      });
+    });
+    new Setting(body).setName("Break minutes").addText((text) => {
+      text.inputEl.type = "number";
+      text.inputEl.min = "1";
+      text.inputEl.max = "60";
+      text.setValue(String(this.draft.breakMinutes));
+      text.onChange((value) => {
+        this.draft.breakMinutes = clampMinutes(value, 5, 60);
+      });
+    });
+
+    const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
+    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: "Save" });
+    cancel.addEventListener("click", () => this.close());
+    save.addEventListener("click", async () => {
+      await this.onSave(this.draft);
+      this.close();
+    });
+  }
+}
 
 export const pomodoroWidget = {
   type: "pomodoro",
@@ -39,15 +97,15 @@ export const pomodoroWidget = {
     setIcon(settingsBtn, "settings");
     const count = timer.createDiv({ cls: "yh-pomo-count" });
     const updateVisual = async () => {
-      const stored = api.plugin.getWidgetData(api.widget.id, "pomodoro");
+      const stored = { state: api.getState(), config: api.getConfig() };
       const computed = reconcilePomodoroState(stored.state, stored.config);
       const total = (computed.status === "break"
         ? (Number(stored.config.breakMinutes) || 5) * 60
         : (Number(stored.config.workMinutes) || 25) * 60) || 1;
       const pct = Math.max(0, Math.min(100, ((total - computed.remainingSeconds) / total) * 100));
       timerText.setText(formatSeconds(computed.remainingSeconds));
-      progressFill.style.width = `${pct}%`;
-      progressFill.style.background = computed.status === "break" ? "var(--komo-green)" : "var(--komo-sakura)";
+      progressFill.style.setProperty("--yh-pomo-fill", `${pct}%`);
+      progressFill.toggleClass("is-break", computed.status === "break");
       meta.setText(
         computed.status === "idle"
           ? "READY TO FOCUS"
@@ -76,7 +134,7 @@ export const pomodoroWidget = {
       void updateVisual();
     }, 1000));
     startBtn.addEventListener("click", async () => {
-      const stored = api.plugin.getWidgetData(api.widget.id, "pomodoro");
+      const stored = { state: api.getState(), config: api.getConfig() };
       const computed = reconcilePomodoroState(stored.state, stored.config);
       if (computed.status === "running" || computed.status === "break") {
         await api.saveState({
@@ -103,23 +161,19 @@ export const pomodoroWidget = {
         phaseStartedAt: 0
       }, true);
     });
-    settingsBtn.addEventListener("click", async () => {
-      const work = window.prompt("Work minutes", String(api.widgetData.config.workMinutes || 25));
-      if (work == null) return;
-      const pause = window.prompt("Break minutes", String(api.widgetData.config.breakMinutes || 5));
-      if (pause == null) return;
-      const nextWork = Number(work) || 25;
-      const nextBreak = Number(pause) || 5;
-      await api.saveConfig({
-        ...api.widgetData.config,
-        workMinutes: nextWork,
-        breakMinutes: nextBreak
-      }, false);
-      await api.saveState({
-        status: "idle",
-        remainingSeconds: nextWork * 60,
-        phaseStartedAt: 0
-      }, true);
+    settingsBtn.addEventListener("click", () => {
+      new PomodoroSettingsModal(api.app, api.getConfig(), async (draft) => {
+        await api.saveConfig({
+          ...api.getConfig(),
+          workMinutes: draft.workMinutes,
+          breakMinutes: draft.breakMinutes
+        }, false);
+        await api.saveState({
+          status: "idle",
+          remainingSeconds: draft.workMinutes * 60,
+          phaseStartedAt: 0
+        }, true);
+      }).open();
     });
   },
   renderSettings(container, draft) {

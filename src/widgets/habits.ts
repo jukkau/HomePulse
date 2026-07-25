@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { addDays, countDistinctCompletionDays, createSvg, localDateKey, normalizeArray, renderEmpty } from "./widget-api";
+import { parseLineList } from "../core/utils";
+import { addDays, createSvg, localDateKey, normalizeArray, renderEmpty } from "./widget-api";
 
-const { Modal, Setting, setIcon } = require("obsidian");
+import { Modal, Setting, setIcon } from "obsidian";
 
 function treeStage(done, total) {
   if (!total || !done) return 0;
@@ -135,6 +136,56 @@ class HabitForestModal extends Modal {
   }
 }
 
+class HabitRenameModal extends Modal {
+  constructor(app, currentName, habits, onRename) {
+    super(app);
+    this.currentName = currentName;
+    this.habits = habits;
+    this.onRename = onRename;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    this.modalEl.addClass("yh-settings-shell", "yh-habit-add-shell");
+    contentEl.empty();
+    contentEl.addClass("yh-modal", "yh-settings-modal", "yh-habit-add-modal");
+    contentEl.createEl("h2", { text: "rename habit" });
+    contentEl.createDiv({ cls: "yh-settings-subtitle", text: "Give this habit a new name. Its history is kept." });
+    const body = contentEl.createDiv({ cls: "yh-settings-body" });
+    let input;
+    new Setting(body).setName("New name").addText((text) => {
+      input = text;
+      text.setValue(this.currentName);
+      window.setTimeout(() => {
+        text.inputEl.focus();
+        text.inputEl.select();
+      }, 0);
+      text.inputEl.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") void submit();
+      });
+    });
+    const error = contentEl.createDiv({ cls: "yh-habit-add-error" });
+    const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
+    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: "Rename" });
+    const submit = async () => {
+      const name = String(input?.getValue() || "").trim();
+      if (!name || name === this.currentName) {
+        this.close();
+        return;
+      }
+      if (this.habits.some((habit) => habit.toLowerCase() === name.toLowerCase())) {
+        error.setText("That habit already exists.");
+        return;
+      }
+      await this.onRename(name);
+      this.close();
+    };
+    cancel.addEventListener("click", () => this.close());
+    save.addEventListener("click", () => void submit());
+  }
+}
+
 class HabitAddModal extends Modal {
   constructor(app, habits, onAdd) {
     super(app);
@@ -189,29 +240,26 @@ export const habitsWidget = {
   defaultSize: { preset: "W1H2", w: 1, h: 2 },
   defaultConfig: { title: "habits" },
   defaultState: { habits: [], completions: {} },
+  // Settings expose the habit list as a textarea (`_habitList`); translate it
+  // back into state here so the plugin core stays widget-agnostic.
+  normalizeConfig(config, state) {
+    const nextConfig = { ...config };
+    const nextState = { ...state };
+    if (typeof nextConfig._habitList === "string") {
+      nextState.habits = parseLineList(nextConfig._habitList);
+      delete nextConfig._habitList;
+    }
+    return { config: nextConfig, state: nextState };
+  },
   async render(container, api) {
     const state = api.widgetData.state;
     const habits = normalizeArray(state.habits, []);
     const completions = state.completions || {};
     const todayKey = localDateKey(api.snapshot.now);
     const completedToday = habits.filter((habit) => completions[`${habit}|${todayKey}`]);
-    const stage = treeStage(completedToday.length, habits.length);
-    const checkInDays = countDistinctCompletionDays(completions);
 
     const forest = container.createDiv({ cls: "yh-habit-forest" });
-    const growth = forest.createDiv({ cls: "yh-forest-growth" });
-    renderTree(growth, stage);
-    growth.createDiv({
-      cls: "yh-forest-count",
-      text: `已打卡 ${checkInDays} 天`
-    });
-    const progress = growth.createDiv({ cls: "yh-forest-progress" });
-    progress.createDiv({
-      cls: "yh-forest-progress-fill",
-      attr: { style: `width:${habits.length ? (completedToday.length / habits.length) * 100 : 0}%` }
-    });
-
-    const today = forest.createDiv({ cls: "yh-habit-today" });
+    const today = forest.createDiv({ cls: "yh-habit-today yh-habit-checkins" });
     const todayHead = today.createDiv({ cls: "yh-habit-today-head" });
     todayHead.createDiv({ text: "today" });
     todayHead.createDiv({ text: api.snapshot.now.toLocaleDateString("en-US", { month: "short", day: "numeric" }) });
@@ -223,6 +271,9 @@ export const habitsWidget = {
         return Number(Boolean(completions[`${a}|${todayKey}`])) - Number(Boolean(completions[`${b}|${todayKey}`]));
       });
       const list = today.createDiv({ cls: "yh-habit-today-list" });
+      const maxNameLength = Math.max(4, ...orderedHabits.map((habit) => String(habit || "").length));
+      const minWidth = Math.max(108, Math.min(220, maxNameLength * 13 + 46));
+      list.style.setProperty("--yh-habit-item-min", `${minWidth}px`);
       for (const habit of orderedHabits) {
         const key = `${habit}|${todayKey}`;
         const isDone = Boolean(completions[key]);
@@ -241,20 +292,19 @@ export const habitsWidget = {
           else next[key] = true;
           await api.saveState({ completions: next }, true);
         });
-        name.addEventListener("click", async () => {
-          const nextName = window.prompt("Rename habit", habit);
-          if (!nextName || nextName.trim() === habit) return;
-          const trimmed = nextName.trim();
-          const updatedHabits = habits.map((item) => item === habit ? trimmed : item);
-          const updatedCompletions = {};
-          for (const [savedKey, value] of Object.entries(completions)) {
-            if (savedKey.startsWith(`${habit}|`)) {
-              updatedCompletions[`${trimmed}|${savedKey.split("|").slice(1).join("|")}`] = value;
-            } else {
-              updatedCompletions[savedKey] = value;
+        name.addEventListener("click", () => {
+          new HabitRenameModal(api.app, habit, habits, async (trimmed) => {
+            const updatedHabits = habits.map((item) => item === habit ? trimmed : item);
+            const updatedCompletions = {};
+            for (const [savedKey, value] of Object.entries(completions)) {
+              if (savedKey.startsWith(`${habit}|`)) {
+                updatedCompletions[`${trimmed}|${savedKey.split("|").slice(1).join("|")}`] = value;
+              } else {
+                updatedCompletions[savedKey] = value;
+              }
             }
-          }
-          await api.saveState({ habits: updatedHabits, completions: updatedCompletions }, true);
+            await api.saveState({ habits: updatedHabits, completions: updatedCompletions }, true);
+          }).open();
         });
       }
     }
@@ -278,8 +328,8 @@ export const habitsWidget = {
       new HabitForestModal(api.app, habits, completions, api.snapshot.now).open();
     });
   },
-  renderSettings(container, draft, ownerPlugin, widget) {
-    const state = ownerPlugin.getWidgetData(widget.id, "habits").state;
+  renderSettings(container, draft, ctx) {
+    const state = ctx.state;
     new Setting(container).setName("Title").addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {

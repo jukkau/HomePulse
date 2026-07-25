@@ -151,8 +151,23 @@ export function validateWidgetConfig(type: string, config: any, defaultConfig: a
     }
 
     case "stats-overview":
-      next.title = asString(raw.title, base.title || "execution overview");
+      next.title = asString(raw.title, base.title || "execution pulse");
+      if (next.title.trim().toLowerCase() === "execution overview") {
+        next.title = "execution pulse";
+      }
       delete next.metrics;
+      break;
+
+    case "knowledge-profile":
+      next.title = asString(raw.title, base.title || "knowledge profile");
+      next.projectNamePrefixes = asStringArray(
+        raw.projectNamePrefixes ?? raw.projectNamePrefix,
+        base.projectNamePrefixes || ["Project_"]
+      );
+      next.projectFolders = asStringArray(raw.projectFolders, base.projectFolders || []);
+      next.projectTags = asStringArray(raw.projectTags, base.projectTags || []);
+      delete next.recentLimit;
+      delete next.projectNamePrefix;
       break;
 
     case "tech-tree":

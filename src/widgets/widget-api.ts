@@ -1,35 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Migration note: WidgetRenderApi interface for widget definitions.
-// This is a type boundary that will be refined in a future pass.
+// Widget-facing helpers. Generic value utilities live in ../core/utils and are
+// re-exported here so widgets keep a single import surface.
 
-export function deepClone(value: any): any {
-  return JSON.parse(JSON.stringify(value));
-}
+import { deepClone, mergeDefaults, normalizeArray, parseLineList } from "../core/utils";
 
-export function mergeDefaults(base: any, saved: any): any {
-  if (Array.isArray(base)) {
-    return Array.isArray(saved) ? deepClone(saved) : deepClone(base);
-  }
-  if (!base || typeof base !== "object") {
-    return saved === undefined ? base : saved;
-  }
-  const next: Record<string, any> = {};
-  const source: Record<string, any> = saved && typeof saved === "object" ? saved : {};
-  for (const key of Object.keys(base)) {
-    next[key] = mergeDefaults(base[key], source[key]);
-  }
-  for (const key of Object.keys(source)) {
-    if (!(key in next)) {
-      next[key] = source[key];
-    }
-  }
-  return next;
-}
-
-export function normalizeArray(value: any, fallback: any): any {
-  return Array.isArray(value) ? value.filter(Boolean) : deepClone(fallback);
-}
+export { deepClone, mergeDefaults, normalizeArray, parseLineList };
 
 export function localDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -61,13 +37,6 @@ export function addDays(date: Date, days: number): Date {
   const copy = new Date(date.getTime());
   copy.setDate(copy.getDate() + days);
   return copy;
-}
-
-export function parseLineList(raw: any): string[] {
-  return String(raw || "")
-    .split(/\r?\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 export function serializeQuickActions(items: any): string {

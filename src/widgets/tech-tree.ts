@@ -4,7 +4,7 @@ import { ALL_SIZE_PRESETS } from "../layout/size-presets";
 import { readTechTreeData } from "../services/tech-tree-reader";
 import { renderEmpty } from "./widget-api";
 
-const { Setting, normalizePath } = require("obsidian");
+import { Setting, normalizePath } from "obsidian";
 
 const TREE_KINDS = new Set(["area", "moc", "project"]);
 
@@ -44,12 +44,19 @@ export const techTreeWidget = {
   defaultState: {},
   async render(container, api) {
     const config = api.widgetData.config;
-    const settings = api.plugin.data.settings;
-    const sourcePath = normalizePath(config.sourcePath || settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE);
-    const areaRoot = config.areaRoot || settings.techTreeAreaRoot;
-    const activeProjectRoot = config.activeProjectRoot || settings.techTreeActiveProjectRoot;
-
-    const data = await readTechTreeData(api.app, sourcePath, { areaRoot, activeProjectRoot });
+    const defaults = api.snapshot.techTreeSettings;
+    const hasOverride = Boolean(config.sourcePath || config.areaRoot || config.activeProjectRoot);
+    // The snapshot already read the tech tree with the global settings; only
+    // re-read when this widget overrides one of them.
+    let data;
+    if (!hasOverride) {
+      data = api.snapshot.techTree;
+    } else {
+      const sourcePath = normalizePath(config.sourcePath || defaults.source || DEFAULT_TECH_TREE_SOURCE);
+      const areaRoot = config.areaRoot || defaults.areaRoot;
+      const activeProjectRoot = config.activeProjectRoot || defaults.activeProjectRoot;
+      data = await readTechTreeData(api.app, sourcePath, { areaRoot, activeProjectRoot });
+    }
     if (!data || data.error) {
       renderEmpty(container, data && data.error ? data.error : "No tech tree data available.");
       return;

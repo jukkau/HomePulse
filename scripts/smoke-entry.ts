@@ -98,7 +98,9 @@ function run() {
     habits: "Habits",
     bookmarks: "Bookmarks",
     "quick-actions": "System",
-    "stats-overview": "Execution Overview",
+    "stats-overview": "Execution Pulse",
+    "knowledge-profile": "Knowledge Profile",
+    "recent-notes": "Recent Notes",
     "tech-tree": "Tech Tree",
     "activity-history": "Activity History"
   };

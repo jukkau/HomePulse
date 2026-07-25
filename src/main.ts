@@ -18,6 +18,7 @@ import { SnapshotBuilder } from "./services/snapshot-builder";
 import { calculateObsidianUsageDays, formatDateKey } from "./services/obsidian-usage";
 import { createWidgetRegistry } from "./widgets/registry";
 import { SetupWizardModal } from "./data/setup-wizard";
+import { clamp, deepClone, mergeDefaults, normalizeArray, randomId } from "./core/utils";
 
 const {
   ItemView,
@@ -28,42 +29,6 @@ const {
   Setting,
   normalizePath
 } = require("obsidian");
-
-function deepClone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
-
-function mergeDefaults(base, saved) {
-  if (Array.isArray(base)) {
-    return Array.isArray(saved) ? deepClone(saved) : deepClone(base);
-  }
-  if (!base || typeof base !== "object") {
-    return saved === undefined ? base : saved;
-  }
-  const next = {};
-  const source = saved && typeof saved === "object" ? saved : {};
-  for (const key of Object.keys(base)) {
-    next[key] = mergeDefaults(base[key], source[key]);
-  }
-  for (const key of Object.keys(source)) {
-    if (!(key in next)) {
-      next[key] = source[key];
-    }
-  }
-  return next;
-}
-
-function normalizeArray(value, fallback) {
-  return Array.isArray(value) ? value.filter(Boolean) : deepClone(fallback);
-}
-
-function randomId(prefix) {
-  return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
 
 function stripHoverHints(root) {
   root.querySelectorAll("[title], [aria-label]").forEach((element) => {
@@ -80,13 +45,6 @@ function formatLongDate(date) {
     day: "numeric",
     weekday: "long"
   });
-}
-
-function parseLineList(raw) {
-  return String(raw || "")
-    .split(/\r?\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function parseWikilink(link) {
@@ -209,7 +167,11 @@ class WidgetSettingsModal extends Modal {
       text: "Configure this widget's content and display."
     });
     const body = contentEl.createDiv({ cls: "yh-settings-body" });
-    this.definition.renderSettings(body, this.draft, this.plugin, this.widget);
+    this.definition.renderSettings(body, this.draft, {
+      app: this.app,
+      state: this.widgetData.state,
+      config: this.widgetData.config
+    });
 
     const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
     const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
@@ -548,6 +510,12 @@ class YukiHomepageView extends ItemView {
     const brand = header.createDiv({ cls: "yh-brand" });
     brand.createDiv({ cls: "yh-brand-title", text: this.plugin.data.settings.profileName || "Your name" });
     brand.createDiv({ cls: "yh-brand-subtitle", text: this.plugin.data.settings.profileSignature || "" });
+    if (snapshot.obsidianDays != null) {
+      const usage = brand.createDiv({ cls: "yh-brand-usage" });
+      usage.createSpan({ text: "你已使用 Obsidian " });
+      usage.createSpan({ cls: "yh-brand-usage-days", text: String(snapshot.obsidianDays) });
+      usage.createSpan({ text: " 天" });
+    }
 
     const clockBlock = header.createDiv({ cls: "yh-clock-block" });
     const timeEl = clockBlock.createDiv({ cls: "yh-time" });
@@ -773,19 +741,31 @@ class YukiHomepageView extends ItemView {
       }
 
       const body = shell.createDiv({ cls: "yh-card-body" });
+      // Minimal render surface. Widgets get Obsidian's `app`, their own data,
+      // the shared snapshot, and a few scoped operations — but no direct handle
+      // on the plugin or view internals.
       const api = {
         app: this.app,
-        plugin: this.plugin,
-        view: this,
+        component: this,
         widget,
         widgetData,
         snapshot,
         rememberInterval: (id) => this.rememberInterval(id),
+        requestRender: () => this.renderView(),
+        getState: () => this.plugin.getWidgetData(widget.id, widget.type).state,
+        getConfig: () => this.plugin.getWidgetData(widget.id, widget.type).config,
+        getUiState: () => (this.widgetUiState[widget.id] ||= {}),
+        setUiState: (patch) => {
+          this.widgetUiState[widget.id] = { ...(this.widgetUiState[widget.id] || {}), ...patch };
+        },
         openPath: async (path) => {
           await this.app.workspace.openLinkText(path, "", false);
         },
         openLink: async (link) => {
           await openExternalOrInternal(this.app, link);
+        },
+        openSettings: () => {
+          this.openWidgetSettings(widget, widgetData, definition);
         },
         saveState: async (patch, rerender = false) => {
           await this.plugin.updateWidgetState(widget.id, patch);
@@ -1046,9 +1026,12 @@ class YukiHomepagePlugin extends Plugin {
     const definition = type ? this.getDefinition(type) : null;
     let nextConfig = deepClone(patch);
     let nextState = { ...(current.state || {}) };
-    if (widget && widget.type === "habits" && typeof nextConfig._habitList === "string") {
-      nextState.habits = parseLineList(nextConfig._habitList);
-      delete nextConfig._habitList;
+    // Widgets may translate settings-only draft fields into config/state here,
+    // keeping widget-specific knowledge out of the plugin core.
+    if (definition && typeof definition.normalizeConfig === "function") {
+      const normalized = definition.normalizeConfig(nextConfig, nextState) || {};
+      if (normalized.config) nextConfig = normalized.config;
+      if (normalized.state) nextState = normalized.state;
     }
     nextConfig = validateWidgetConfig(type, nextConfig, definition ? definition.defaultConfig : {});
     nextState = validateWidgetState(type, nextState, definition ? definition.defaultState : {});

@@ -4,5 +4,6 @@ dist/
 *.log
 main.js.map
 data.json
+data.backup-*.json
 data-冲突-*.json
 backup-*/

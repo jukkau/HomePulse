@@ -33,48 +33,57 @@ export const DEFAULT_DATA = {
     columns: 5,
     widgets: [
       { id: "focus-main", type: "focus", x: 0, y: 0, sizePreset: "W1H1" },
-      { id: "stats-main", type: "stats-overview", x: 1, y: 0, sizePreset: "W4H1" },
-      { id: "tasks-main", type: "tasks", x: 0, y: 1, sizePreset: "W1H3" },
-      { id: "calendar-main", type: "calendar", x: 1, y: 1, sizePreset: "W2H2" },
-      { id: "pomodoro-main", type: "pomodoro", x: 3, y: 1, sizePreset: "W1H2" },
-      { id: "projects-main", type: "projects", x: 4, y: 1, sizePreset: "W1H3" },
-      { id: "habits-main", type: "habits", x: 1, y: 3, sizePreset: "W2H2" },
-      { id: "quick-actions-main", type: "quick-actions", x: 0, y: 3, sizePreset: "W1H2" },
-      { id: "tech-tree-main", type: "tech-tree", x: 3, y: 3, sizePreset: "W3H2" },
-      { id: "activity-main", type: "activity-history", x: 2, y: 5, sizePreset: "W4H2" }
+      { id: "knowledge-main", type: "knowledge-profile", x: 1, y: 0, sizePreset: "W2H1" },
+      { id: "music-player-b5317ac", type: "music-player", x: 3, y: 0, sizePreset: "W2H1" },
+      { id: "habits-b0sr8rf", type: "habits", x: 0, y: 1, sizePreset: "W2H2" },
+      { id: "pomodoro-64kmxai", type: "pomodoro", x: 2, y: 1, sizePreset: "W1H2" },
+      { id: "tasks-lt2bqf1", type: "tasks", x: 3, y: 1, sizePreset: "W1H4" },
+      { id: "calendar-1hcbws7", type: "calendar", x: 4, y: 1, sizePreset: "W1H2" },
+      { id: "stats-main", type: "stats-overview", x: 0, y: 3, sizePreset: "W3H2" },
+      { id: "bookmarks-b1qil66", type: "bookmarks", x: 4, y: 3, sizePreset: "W1H2" },
+      { id: "tech-tree-main", type: "tech-tree", x: 0, y: 5, sizePreset: "W2H4" },
+      { id: "projects-3fn9vd3", type: "projects", x: 2, y: 5, sizePreset: "W1H2" },
+      { id: "recent-notes-xmng40z", type: "recent-notes", x: 3, y: 5, sizePreset: "W1H2" },
+      { id: "quick-actions-0h6rh95", type: "quick-actions", x: 4, y: 5, sizePreset: "W1H2" },
+      { id: "activity-main", type: "activity-history", x: 2, y: 7, sizePreset: "W3H2" }
     ]
   },
 
   widgets: {
     "focus-main": {
-      config: { title: "today's goal", placeholder: "define your focus..." },
+      config: { title: "focus today", placeholder: "define your focus..." },
       state: { text: "" }
     },
     "stats-main": {
-      config: { title: "execution overview" },
+      config: { title: "execution pulse" },
       state: {}
     },
-    "projects-main": {
+    "knowledge-main": {
       config: {
-        title: "projects",
-        folders: [],
-        limit: 10
+        title: "knowledge profile",
+        projectNamePrefixes: ["Project_"],
+        projectFolders: [],
+        projectTags: []
       },
       state: {}
     },
-    "tasks-main": {
+    "music-player-b5317ac": {
       config: {
-        title: "open tasks",
-        folders: [],
-        limit: 12
+        title: "music player",
+        serviceName: "NetEase Cloud Music",
+        loginUrl: "https://music.163.com/",
+        playUrl: "https://music.163.com/"
       },
       state: {}
     },
-    "calendar-main": {
-      config: { title: "calendar" },
-      state: {}
+    "habits-b0sr8rf": {
+      config: { title: "habits" },
+      state: {
+        habits: [],
+        completions: {}
+      }
     },
-    "pomodoro-main": {
+    "pomodoro-64kmxai": {
       config: {
         title: "pomodoro",
         workMinutes: 25,
@@ -88,22 +97,47 @@ export const DEFAULT_DATA = {
         todayCount: 0
       }
     },
-    "habits-main": {
-      config: { title: "habits" },
-      state: {
-        habits: [],
-        completions: {}
-      }
+    "tasks-lt2bqf1": {
+      config: {
+        title: "open tasks",
+        folders: [],
+        limit: 12
+      },
+      state: {}
     },
-    "quick-actions-main": {
+    "calendar-1hcbws7": {
+      config: { title: "calendar" },
+      state: {}
+    },
+    "bookmarks-b1qil66": {
+      config: {
+        title: "bookmarks",
+        variant: "grid",
+        useFavicons: false,
+        items: []
+      },
+      state: {}
+    },
+    "projects-3fn9vd3": {
+      config: {
+        title: "projects",
+        folders: [],
+        limit: 10
+      },
+      state: {}
+    },
+    "recent-notes-xmng40z": {
+      config: { title: "recently updated", limit: 6 },
+      state: {}
+    },
+    "quick-actions-0h6rh95": {
       config: {
         title: "system",
         variant: "grid",
         sectionTitle: "",
         items: [
           { label: "daily", type: "daily-note", value: "" },
-          { label: "search", type: "command", value: "global-search:open" },
-          { label: "commands", type: "command", value: "command-palette:open" }
+          { label: "search", type: "command", value: "global-search:open" }
         ],
         secondaryTitle: "",
         secondaryItems: []

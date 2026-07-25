@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { normalizeArray, renderEmpty } from "./widget-api";
+import { normalizeArray } from "./widget-api";
 
 const { Notice, Setting, setIcon } = require("obsidian");
 
@@ -81,7 +81,14 @@ export const bookmarksWidget = {
     const variant = api.widgetData.config.variant === "compact" ? "compact" : "grid";
     const useFavicons = api.widgetData.config.useFavicons === true;
     if (!items.length) {
-      renderEmpty(container, "No bookmarks configured.");
+      const empty = container.createEl("button", { cls: "yh-empty yh-empty-action yh-bookmarks-empty" });
+      const icon = empty.createDiv({ cls: "yh-empty-icon" });
+      setIcon(icon, "bookmark-plus");
+      empty.createDiv({ cls: "yh-empty-title", text: "No bookmarks configured." });
+      empty.createDiv({ cls: "yh-empty-subtitle", text: "Add your first link" });
+      empty.addEventListener("click", () => {
+        api.openSettings?.();
+      });
       return;
     }
 

@@ -1,6 +1,6 @@
 # Yuki Homepage
 
-A local-first Obsidian homepage plugin that brings tasks, calendar, habits, pomodoro, activity heatmap, and a knowledge capability map into one cohesive dashboard. Built with a draggable grid layout and responsive compact reflow for both 14-inch laptops and widescreen displays.
+A local-first Obsidian homepage plugin that brings focus, execution pulse, knowledge profile, activity heatmap, and a capability map into one cohesive dashboard. Built with a draggable grid layout and responsive compact reflow for both 14-inch laptops and widescreen displays.
 
 ![Homepage](docs/images/homepage.png)
 
@@ -25,7 +25,19 @@ A local-first Obsidian homepage plugin that brings tasks, calendar, habits, pomo
 | **System** | Configurable commands and daily-note shortcuts using `label|type|value` entries |
 | **Activity History** | Activity heatmap from vault file modification timestamps |
 | **Tech Tree** | Auto-generated capability map: Value → Area → Project, driven by Area metadata and project `area` frontmatter links |
-| **Execution Overview** | Grouped Vault, Work, and Routine metrics |
+| **Execution Pulse** | Recent personal-system running status across habits, focus, knowledge growth, and tasks |
+| **Knowledge Profile** | Knowledge asset totals for notes, Areas, projects, and tags |
+| **Recent Notes** | Recently updated notes from the vault |
+
+## Default Information Architecture
+
+The default homepage layout is organized as:
+
+1. **Focus Today**, **Knowledge Profile**, and **Music Player**
+2. **Habits**, **Pomodoro**, **Tasks**, and **Calendar**
+3. **Execution Pulse** and **Bookmarks**
+4. **Tech Tree**, **Projects**, **Recent Notes**, and **System**
+5. **Activity History**
 
 
 ## Plugin Dependencies
@@ -87,23 +99,23 @@ tags:
 
 Projects link to Areas via frontmatter:
 
-`yaml
+```yaml
 area:
   - "[[20_Areas/Area_Learning|Learning]]"
 tags: [type/project, status/ing]
-`
+```
 
 Daily notes, task files, and single-output notes are excluded from the capability map.
 
 ## Development
 
-`ash
+```bash
 npm install
 npm run dev        # watch + dev build
 npm run check      # type-check
 npm run smoke      # smoke test
 npm run build      # production build
-`
+```
 
 ## Privacy
 
@@ -121,7 +133,7 @@ npm run build      # production build
 ## Roadmap
 
 - [x] Grid layout with drag & resize
-- [x] Widget system (Focus, Projects, Tasks, Calendar, Habits, Pomodoro, Music Player, Bookmarks, System, Activity History, Tech Tree, Execution Overview)
+- [x] Widget system (Focus, Projects, Tasks, Calendar, Habits, Pomodoro, Music Player, Bookmarks, System, Activity History, Tech Tree, Execution Pulse, Knowledge Profile, Recent Notes)
 - [x] First-run setup wizard
 - [x] TypeScript strict mode
 - [x] GitHub Actions release workflow with artifact attestation
