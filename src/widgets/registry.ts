@@ -2,9 +2,11 @@
 // Migration note: registry is the single registration entry for all widgets.
 
 import { activityHistoryWidget } from "./activity-history";
+import { bookmarksWidget } from "./bookmarks";
 import { calendarWidget } from "./calendar";
 import { focusWidget } from "./focus";
 import { habitsWidget } from "./habits";
+import { musicPlayerWidget } from "./music-player";
 import { pomodoroWidget } from "./pomodoro";
 import { projectsWidget } from "./projects";
 import { quickActionsWidget } from "./quick-actions";
@@ -20,7 +22,9 @@ export function createWidgetRegistry(plugin) {
     tasksWidget,
     calendarWidget,
     pomodoroWidget,
+    musicPlayerWidget,
     habitsWidget,
+    bookmarksWidget,
     quickActionsWidget,
     statsOverviewWidget,
     techTreeWidget,

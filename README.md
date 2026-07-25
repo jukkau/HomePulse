@@ -1,71 +1,133 @@
 # Yuki Homepage
 
-一个面向 Obsidian 的本地首页插件。它提供可调整的仪表盘组件，让任务、日历、习惯、番茄钟、活动热力图和能力地图在一个视图中协作。
+A local-first Obsidian homepage plugin that brings tasks, calendar, habits, pomodoro, activity heatmap, and a knowledge capability map into one cohesive dashboard. Built with a draggable grid layout and responsive compact reflow for both 14-inch laptops and widescreen displays.
 
-## 功能
+![Homepage](docs/images/homepage.png)
 
-- 可编辑的网格布局，并针对 14 寸笔记本与宽屏进行响应式紧凑重排。
-- Focus、Tasks、Habits、Pomodoro、Calendar、Activity History、Quick Actions 等首页组件。
-- 侧边栏首页入口；可设为启动时打开，并可锁定为固定标签页。
-- 自动生成能力地图：`Value → Area → Project`，从 Area 元数据与项目的 `area` 关联读取层级。
-- 项目位于 `10_Projects/进行中`，或同时带有 `type/project`、`status/ing` 标签时，会显示在能力地图中。
+## Features
 
-## 配置
+- **Editable Grid Layout** — Drag, resize, and arrange widgets in a responsive 2-column grid. Compact-reflows for narrower viewports.
+- **Homepage View** — Register a custom Obsidian view as your homepage. Pin it as a persistent tab and auto-open on startup.
+- **First-Run Setup Wizard** — A guided 4-step wizard helps new users configure homepage name, project folder, area folder, and widget toggles on first launch.
 
-插件设置中可修改首页名称、能力地图来源、Area 文件夹和活跃项目文件夹。Quick Actions 组件的设置支持按 `label|type|value` 编辑链接、Obsidian 命令和每日笔记入口；新安装不会预置个人 AI 服务链接。
+## Widgets
 
-## 安装
+| Widget | Description |
+|---|---|
+| **Focus** | Daily focus / intention with a simple input |
+| **Projects** | Active projects from configured project folder, filtered by status/ing |
+| **Tasks** | Aggregated tasks from vault markdown files |
+| **Calendar** | Inline calendar view with daily navigation |
+| **Habits** | Habit tracker with streak visualization |
+| **Pomodoro** | Built-in pomodoro timer with work/break cycles |
+| **Music Player** | Opens a configured NetEase Cloud Music page in the browser for login and playback |
+| **Bookmarks** | Configurable URL bookmarks using `label|url` entries or direct URL lines |
+| **System** | Configurable commands and daily-note shortcuts using `label|type|value` entries |
+| **Activity History** | Activity heatmap from vault file modification timestamps |
+| **Tech Tree** | Auto-generated capability map: Value → Area → Project, driven by Area metadata and project `area` frontmatter links |
+| **Execution Overview** | Grouped Vault, Work, and Routine metrics |
 
-将本目录放到 Obsidian Vault 的：
 
-```text
+## Plugin Dependencies
+
+Yuki Homepage is self-contained and does not require any community plugin. Widget data is read directly from your local markdown files, including task checkboxes, frontmatter metadata, and file timestamps.
+
+| Plugin | Requirement | When it is used |
+|---|---|---|
+| **Daily Notes** | Optional core plugin | Required only when a System item uses the `daily-note` action. Without it, only that button is unavailable. |
+| **QuickAdd** | Optional community plugin | Required only when you configure a System command such as `quickadd:runQuickAdd`. It is not included in the public defaults. |
+| **cMenu** | Not required | Yuki Homepage has no cMenu integration or dependency. |
+
+Other community plugins, including Tasks and ActivityWatch-style plugins, are not required. Tasks are read from markdown checkboxes, while Activity History is generated from local file modification timestamps.
+
+Bookmarks can optionally load native site favicons from each bookmark domain. This setting is disabled by default so the public default configuration remains local-first.
+
+Music Player opens the configured music service URL in your browser. It does not store music account credentials or control playback inside your vault.
+
+## Installation
+
+### From Obsidian Community Plugins
+
+1. Open Obsidian → Settings → Community Plugins
+2. Search for "Yuki Homepage"
+3. Install and enable
+
+### Manual
+
+Copy this directory into your vault:
+
+`
 .obsidian/plugins/yuki-homepage/
-```
+`
 
-然后在 Obsidian 的“第三方插件”中启用 **Yuki Homepage**。
+Then enable **Yuki Homepage** in Settings → Community Plugins.
 
-## 开发
+## Configuration
 
-```bash
-npm install
-npm run dev
-```
+Plugin settings allow you to customize:
 
-验证与生产构建：
+- **Homepage Name** — The name displayed in the homepage header
+- **Project Folder** — Where active projects live (default: 10_Projects)
+- **Area Folder** — Where notes linked to Values with `value/*` tags live (default: `20_Areas`)
+- **Tech Tree Source** — Source folder for capability map generation
+- **Activity Source** — Source folder for activity history tracking
+- **Music Player** — Browser URLs for music login and playback
+- **Bookmarks** — Editable URL list in `label|url` format, or one URL per line
+- **System Actions** — Editable action list in `label|type|value` format (commands and daily notes)
+- **Widget Toggles** — Enable or disable individual widgets
 
-```bash
-npm run check
-npm run smoke
-npm run build
-```
+### Tech Tree Metadata
 
-## 能力地图元数据
-
-Area 需要位于 `20_Areas`，并带有 `type: area` 和一个 `value/*` 标签：
+Area notes are discovered from the configured Area folder. Every note with a `value/*` tag is included; `type: area` is optional:
 
 ```yaml
-type: area
 tags:
-  - value/理解世界
+  - value/understanding-the-world
 ```
 
-项目通过 `area` 关联 Area：
+Projects link to Areas via frontmatter:
 
-```yaml
+`yaml
 area:
-  - "[[20_Areas/Area_学习与知识管理|学习与知识管理]]"
+  - "[[20_Areas/Area_Learning|Learning]]"
 tags: [type/project, status/ing]
-```
+`
 
-Daily、Task 与单篇输出不会进入能力地图。
+Daily notes, task files, and single-output notes are excluded from the capability map.
 
-## 隐私
+## Development
 
-`data.json` 保存个人首页配置、习惯记录与本地库路径，已被 `.gitignore` 排除。请不要提交自己的插件数据、Vault 内容、令牌或密钥。
+`ash
+npm install
+npm run dev        # watch + dev build
+npm run check      # type-check
+npm run smoke      # smoke test
+npm run build      # production build
+`
 
-## 致谢
+## Privacy
 
-本插件的视觉语言参考并改编自 **Dashboard-Komorebi.css**（木漏れ日 / Komorebi 风格），原始设计署名为 **InlitX**。本项目保留该设计来源声明；原文件的版权与许可状态仍以原作者的说明为准。
+- All data is stored and processed locally within your vault.
+- The plugin makes no network requests and uploads no files.
+- File scanning is limited to generating dashboard data (projects, tasks, capability map).
+- data.json stores personal dashboard configuration, habit records, and vault paths — it is excluded from version control via .gitignore.
+- Do not commit your plugin data, vault content, tokens, or secrets.
+- Configure data source folders in plugin settings to restrict file scanning scope.
+
+## Credits
+
+- Visual design inspired by **Dashboard-Komorebi.css** (Komorebi / Catppuccin style) by **InlitX**. See [docs/UI-Credits.md](docs/UI-Credits.md) for full attribution.
+
+## Roadmap
+
+- [x] Grid layout with drag & resize
+- [x] Widget system (Focus, Projects, Tasks, Calendar, Habits, Pomodoro, Music Player, Bookmarks, System, Activity History, Tech Tree, Execution Overview)
+- [x] First-run setup wizard
+- [x] TypeScript strict mode
+- [x] GitHub Actions release workflow with artifact attestation
+- [ ] More theme adaptations
+- [ ] Widget configuration enhancements
+- [ ] Community widget API
 
 ## License
 

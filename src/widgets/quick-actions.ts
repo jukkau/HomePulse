@@ -46,7 +46,7 @@ function renderActionIcon(button, item) {
 
 export const quickActionsWidget = {
   type: "quick-actions",
-  displayName: "Quick Actions",
+  displayName: "System",
   shell: "strip",
   allowedSizes: ALL_SIZE_PRESETS,
   defaultSize: { preset: "W1H2", w: 1, h: 2 },
@@ -103,7 +103,7 @@ export const quickActionsWidget = {
     if (variant === "stack") {
       const stack = container.createDiv({ cls: "yh-action-stack" });
       const groups = [
-        { title: api.widgetData.config.sectionTitle || "AI tools", items },
+        { title: api.widgetData.config.sectionTitle || "bookmarks", items },
         { title: api.widgetData.config.secondaryTitle || "system", items: secondaryItems }
       ];
       for (const group of groups) {
@@ -128,34 +128,15 @@ export const quickActionsWidget = {
     new Setting(container).setName("Layout").addDropdown((drop) => {
       drop.addOption("grid", "Grid");
       drop.addOption("compact", "Compact list");
-      drop.addOption("stack", "Two sections");
-      drop.setValue(draft.variant === "stack" ? "stack" : draft.variant === "compact" ? "compact" : "grid");
+      drop.setValue(draft.variant === "compact" ? "compact" : "grid");
       drop.onChange((value) => {
         draft.variant = value;
       });
     });
-    new Setting(container).setName("Primary section title").addText((text) => {
-      text.setValue(draft.sectionTitle || "");
-      text.onChange((value) => {
-        draft.sectionTitle = value;
-      });
-    });
-    new Setting(container).setName("Actions").setDesc("Format: label|type|value").addTextArea((text) => {
+    new Setting(container).setName("System actions").setDesc("Format: label|type|value").addTextArea((text) => {
       text.setValue(serializeQuickActions(draft.items || []));
       text.onChange((value) => {
         draft.items = parseQuickActions(value);
-      });
-    });
-    new Setting(container).setName("Secondary section title").addText((text) => {
-      text.setValue(draft.secondaryTitle || "");
-      text.onChange((value) => {
-        draft.secondaryTitle = value;
-      });
-    });
-    new Setting(container).setName("Secondary actions").setDesc("Format: label|type|value").addTextArea((text) => {
-      text.setValue(serializeQuickActions(draft.secondaryItems || []));
-      text.onChange((value) => {
-        draft.secondaryItems = parseQuickActions(value);
       });
     });
   }

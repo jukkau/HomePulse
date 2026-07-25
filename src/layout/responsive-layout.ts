@@ -2,7 +2,7 @@ import type { WidgetLayoutItem } from "../types";
 import { packLayout } from "./pack-layout";
 import { applySizePreset } from "./size-presets";
 
-const SECONDARY_WIDGET_TYPES = new Set(["calendar", "pomodoro", "quick-actions"]);
+const SECONDARY_WIDGET_TYPES = new Set(["calendar", "pomodoro", "music-player", "bookmarks", "quick-actions"]);
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));

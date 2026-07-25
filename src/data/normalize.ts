@@ -1,4 +1,5 @@
-// @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { DEFAULT_DATA } from "./defaults";
 import { migrateToLatest, CURRENT_SCHEMA_VERSION } from "./migrations";
 import {
@@ -42,7 +43,7 @@ function validateAndFillDefaults(migrated: any, deps: NormalizeDeps): PluginData
   }
 
   const widgetMap = data.widgets && typeof data.widgets === "object" ? data.widgets : {};
-  const nextMap = {};
+  const nextMap: Record<string, any> = {};
 
   for (const widget of data.layout.widgets) {
     const definition = deps.getDefinition(widget.type);
@@ -64,7 +65,7 @@ function validateAndFillDefaults(migrated: any, deps: NormalizeDeps): PluginData
   return data;
 }
 
-function normalizeLayout(rawLayout: any, fallbackLayout: any, deps: NormalizeDeps) {
+function normalizeLayout(rawLayout: any, fallbackLayout: any, deps: NormalizeDeps): any {
   const layout = rawLayout && typeof rawLayout === "object" ? rawLayout : fallbackLayout;
   const rawWidgets = deps.normalizeArray(layout.widgets, fallbackLayout.widgets);
   const widgets = rawWidgets
@@ -80,7 +81,7 @@ function normalizeLayout(rawLayout: any, fallbackLayout: any, deps: NormalizeDep
       };
       return deps.applySizePreset(next, next.sizePreset, 5);
     })
-    .filter(Boolean);
+    .filter((w): w is WidgetLayoutItem => Boolean(w));
 
   return {
     columns: 5,

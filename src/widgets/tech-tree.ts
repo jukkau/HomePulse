@@ -40,17 +40,16 @@ export const techTreeWidget = {
   shell: "canvas",
   allowedSizes: ALL_SIZE_PRESETS,
   defaultSize: { preset: "W4H1", w: 4, h: 1 },
-  defaultConfig: { title: "tech tree", sourcePath: "" },
+  defaultConfig: { title: "tech tree", sourcePath: "", areaRoot: "", activeProjectRoot: "" },
   defaultState: {},
   async render(container, api) {
-    let data = api.snapshot.techTree;
-    const override = api.widgetData.config.sourcePath && normalizePath(api.widgetData.config.sourcePath);
-    if (override && override !== normalizePath(api.plugin.data.settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE)) {
-      data = await readTechTreeData(api.app, override, {
-        areaRoot: api.plugin.data.settings.techTreeAreaRoot,
-        activeProjectRoot: api.plugin.data.settings.techTreeActiveProjectRoot
-      });
-    }
+    const config = api.widgetData.config;
+    const settings = api.plugin.data.settings;
+    const sourcePath = normalizePath(config.sourcePath || settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE);
+    const areaRoot = config.areaRoot || settings.techTreeAreaRoot;
+    const activeProjectRoot = config.activeProjectRoot || settings.techTreeActiveProjectRoot;
+
+    const data = await readTechTreeData(api.app, sourcePath, { areaRoot, activeProjectRoot });
     if (!data || data.error) {
       renderEmpty(container, data && data.error ? data.error : "No tech tree data available.");
       return;
@@ -105,10 +104,22 @@ export const techTreeWidget = {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Source override").setDesc("Optional. Leave blank to use the global tech tree source.").addText((text) => {
+    new Setting(container).setName("Source file").setDesc("Optional. Leave blank to use the global setting.").addText((text) => {
       text.setValue(draft.sourcePath || "");
       text.onChange((value) => {
         draft.sourcePath = value.trim();
+      });
+    });
+    new Setting(container).setName("Area folder").setDesc("Optional. Overrides the global Area folder for this widget.").addText((text) => {
+      text.setValue(draft.areaRoot || "");
+      text.onChange((value) => {
+        draft.areaRoot = value.trim();
+      });
+    });
+    new Setting(container).setName("Project folder").setDesc("Optional. Overrides the global active project folder for this widget.").addText((text) => {
+      text.setValue(draft.activeProjectRoot || "");
+      text.onChange((value) => {
+        draft.activeProjectRoot = value.trim();
       });
     });
   }

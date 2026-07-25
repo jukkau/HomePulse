@@ -1,15 +1,18 @@
-// @ts-nocheck
 // Migration note: schema migrations for plugin data.json.
 // Current data without schemaVersion is treated as v0.
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export const CURRENT_SCHEMA_VERSION = 1;
+
+type MigrationData = Record<string, any>;
 
 /**
  * Run all migrations needed to bring raw plugin data to CURRENT_SCHEMA_VERSION.
  * Does not fill defaults or validate widget payloads — that is validators/normalize.
  */
-export function migrateToLatest(raw) {
-  const base =
+export function migrateToLatest(raw: any): MigrationData {
+  const base: MigrationData =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? { ...raw }
       : {};
@@ -36,8 +39,8 @@ export function migrateToLatest(raw) {
  * - Ensure top-level keys exist as plain objects/arrays so later steps are safe.
  * - Preserve user layout, widget ids, config, and state as-is.
  */
-function migrateV0ToV1(raw) {
-  const next = {
+function migrateV0ToV1(raw: MigrationData): MigrationData {
+  const next: MigrationData = {
     schemaVersion: 1
   };
 
@@ -75,6 +78,6 @@ function migrateV0ToV1(raw) {
   return next;
 }
 
-function isPlainObject(value) {
+function isPlainObject(value: any): boolean {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

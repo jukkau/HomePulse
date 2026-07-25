@@ -1,20 +1,21 @@
-// @ts-nocheck
-// Migration note: WidgetRenderApi interface for widget definitions.
-// This is a type boundary that will be refined when @ts-nocheck is removed.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-export function deepClone(value) {
+// Migration note: WidgetRenderApi interface for widget definitions.
+// This is a type boundary that will be refined in a future pass.
+
+export function deepClone(value: any): any {
   return JSON.parse(JSON.stringify(value));
 }
 
-export function mergeDefaults(base, saved) {
+export function mergeDefaults(base: any, saved: any): any {
   if (Array.isArray(base)) {
     return Array.isArray(saved) ? deepClone(saved) : deepClone(base);
   }
   if (!base || typeof base !== "object") {
     return saved === undefined ? base : saved;
   }
-  const next = {};
-  const source = saved && typeof saved === "object" ? saved : {};
+  const next: Record<string, any> = {};
+  const source: Record<string, any> = saved && typeof saved === "object" ? saved : {};
   for (const key of Object.keys(base)) {
     next[key] = mergeDefaults(base[key], source[key]);
   }
@@ -26,18 +27,18 @@ export function mergeDefaults(base, saved) {
   return next;
 }
 
-export function normalizeArray(value, fallback) {
+export function normalizeArray(value: any, fallback: any): any {
   return Array.isArray(value) ? value.filter(Boolean) : deepClone(fallback);
 }
 
-export function localDateKey(date) {
+export function localDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-export function countDistinctCompletionDays(completions) {
+export function countDistinctCompletionDays(completions: any): number {
   const days = new Set();
   for (const [key, completed] of Object.entries(completions || {})) {
     if (!completed) continue;
@@ -48,7 +49,7 @@ export function countDistinctCompletionDays(completions) {
   return days.size;
 }
 
-export function startOfWeek(date) {
+export function startOfWeek(date: Date): Date {
   const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const day = copy.getDay() === 0 ? 7 : copy.getDay();
   copy.setDate(copy.getDate() - day + 1);
@@ -56,24 +57,24 @@ export function startOfWeek(date) {
   return copy;
 }
 
-export function addDays(date, days) {
+export function addDays(date: Date, days: number): Date {
   const copy = new Date(date.getTime());
   copy.setDate(copy.getDate() + days);
   return copy;
 }
 
-export function parseLineList(raw) {
+export function parseLineList(raw: any): string[] {
   return String(raw || "")
     .split(/\r?\n|,/)
     .map((item) => item.trim())
     .filter(Boolean);
 }
 
-export function serializeQuickActions(items) {
-  return normalizeArray(items, []).map((item) => `${item.label}|${item.type}|${item.value}`).join("\n");
+export function serializeQuickActions(items: any): string {
+  return normalizeArray(items, []).map((item: any) => `${item.label}|${item.type}|${item.value}`).join("\n");
 }
 
-export function parseQuickActions(raw) {
+export function parseQuickActions(raw: any): any[] {
   return String(raw || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -88,18 +89,18 @@ export function parseQuickActions(raw) {
     });
 }
 
-export function formatSeconds(total) {
+export function formatSeconds(total: any): string {
   const safe = Math.max(0, Number(total) || 0);
   const minutes = String(Math.floor(safe / 60)).padStart(2, "0");
   const seconds = String(safe % 60).padStart(2, "0");
   return `${minutes}:${seconds}`;
 }
 
-export function renderEmpty(container, text) {
+export function renderEmpty(container: any, text: string): void {
   container.createDiv({ cls: "yh-empty", text });
 }
 
-export function createSvg(parent, tag, attributes = {}) {
+export function createSvg(parent: any, tag: string, attributes: Record<string, string> = {}): SVGElement {
   const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
   for (const [key, value] of Object.entries(attributes)) {
     node.setAttribute(key, String(value));
@@ -108,7 +109,7 @@ export function createSvg(parent, tag, attributes = {}) {
   return node;
 }
 
-export function reconcilePomodoroState(state, config) {
+export function reconcilePomodoroState(state: any, config: any): any {
   const workSeconds = (Number(config.workMinutes) || 25) * 60;
   const breakSeconds = (Number(config.breakMinutes) || 5) * 60;
   const next = mergeDefaults({
@@ -154,7 +155,7 @@ export function reconcilePomodoroState(state, config) {
   return next;
 }
 
-export function calculateHabitRate(habits, completions, weekStart, habitDays) {
+export function calculateHabitRate(habits: any, completions: any, weekStart: Date, habitDays: number): number {
   const list = normalizeArray(habits, []);
   const total = list.length * habitDays;
   if (!total) return 0;
@@ -169,7 +170,7 @@ export function calculateHabitRate(habits, completions, weekStart, habitDays) {
   return Math.round((done / total) * 100);
 }
 
-export function parseMetricList(raw) {
+export function parseMetricList(raw: any): string[] {
   const allowed = ["projects", "tasks", "habits", "pomodoro"];
   const items = String(raw || "")
     .split(",")

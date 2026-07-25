@@ -41,6 +41,8 @@ export type WidgetStoredData<
 
 export type PluginData = {
   schemaVersion: number;
+  /** false on first run; set to true after SetupWizardModal completes */
+  initialized: boolean;
   settings: HomepageSettings;
   layout: HomepageLayout;
   defaultLayout?: HomepageLayout;

@@ -17,6 +17,7 @@ import { applySizePreset, toSizePreset } from "./layout/size-presets";
 import { SnapshotBuilder } from "./services/snapshot-builder";
 import { calculateObsidianUsageDays, formatDateKey } from "./services/obsidian-usage";
 import { createWidgetRegistry } from "./widgets/registry";
+import { SetupWizardModal } from "./data/setup-wizard";
 
 const {
   ItemView,
@@ -100,8 +101,50 @@ function cycleValue(values, current) {
   return values[(index + 1) % values.length];
 }
 
-async function confirmResetLayout() {
-  return window.confirm("Reset layout to the saved default arrangement? This cannot be undone.");
+class ResetLayoutConfirmModal extends Modal {
+  constructor(app, onResolve) {
+    super(app);
+    this.onResolve = onResolve;
+    this.resolved = false;
+  }
+
+  resolve(value) {
+    if (this.resolved) return;
+    this.resolved = true;
+    this.onResolve(value);
+    this.close();
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    this.modalEl.addClass("yh-settings-shell");
+    contentEl.empty();
+    contentEl.addClass("yh-modal", "yh-settings-modal");
+    contentEl.createEl("h2", { text: "Reset layout?" });
+    contentEl.createDiv({
+      cls: "yh-settings-subtitle",
+      text: "This will restore the saved default widget positions, sizes, and widget set. Current layout changes will be replaced."
+    });
+
+    const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
+    const confirm = footer.createEl("button", { cls: "mod-warning yh-modal-save", text: "Reset layout" });
+    cancel.addEventListener("click", () => this.resolve(false));
+    confirm.addEventListener("click", () => this.resolve(true));
+  }
+
+  onClose() {
+    if (!this.resolved) {
+      this.resolved = true;
+      this.onResolve(false);
+    }
+  }
+}
+
+async function confirmResetLayout(app) {
+  return new Promise((resolve) => {
+    new ResetLayoutConfirmModal(app, resolve).open();
+  });
 }
 
 async function openExternalOrInternal(app, link) {
@@ -127,6 +170,7 @@ class AddWidgetModal extends Modal {
 
   onOpen() {
     const { contentEl } = this;
+    this.modalEl.addClass("yh-add-widget-shell");
     contentEl.empty();
     contentEl.addClass("yh-modal");
     contentEl.createEl("h2", { text: "Add widget" });
@@ -282,7 +326,10 @@ class YukiHomepageSettingTab extends PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: VIEW_NAME });
+
+    new Setting(containerEl)
+      .setName(VIEW_NAME)
+      .setHeading();
 
     new Setting(containerEl)
       .setName("Open on startup")
@@ -369,7 +416,7 @@ class YukiHomepageSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Tech tree Area folder")
-      .setDesc("Vault-relative folder that contains notes with type: area.")
+      .setDesc("Vault-relative folder containing Area notes linked by value/* tags.")
       .addText((text) => {
         text.setPlaceholder("20_Areas");
         text.setValue(this.plugin.data.settings.techTreeAreaRoot || "20_Areas");
@@ -412,7 +459,7 @@ class YukiHomepageSettingTab extends PluginSettingTab {
         button.setButtonText("Reset");
         button.setWarning();
         button.onClick(async () => {
-          if (!(await confirmResetLayout())) return;
+          if (!(await confirmResetLayout(this.app))) return;
           await this.plugin.resetToDefaults();
           new Notice("Yuki Homepage layout reset.");
         });
@@ -562,7 +609,7 @@ class YukiHomepageView extends ItemView {
         const resetBtn = actions.createEl("button", { text: "Reset" });
         addBtn.addEventListener("click", () => this.openAddWidgetModal());
         resetBtn.addEventListener("click", async () => {
-          if (!(await confirmResetLayout())) return;
+          if (!(await confirmResetLayout(this.app))) return;
           await this.plugin.resetToDefaults();
         });
       }
@@ -799,6 +846,9 @@ class YukiHomepagePlugin extends Plugin {
     this.registerEvent(this.app.vault.on("rename", refresh));
 
     this.app.workspace.onLayoutReady(() => {
+      if (!this.data.initialized) {
+        new SetupWizardModal(this.app, this).open();
+      }
       if (this.data.settings.openOnStartup) {
         void this.openHomepage({ reveal: false });
       }

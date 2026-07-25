@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { getExecutionMetrics } from "./stats-overview";
 
 const { Setting, MarkdownRenderer } = require("obsidian");
 
@@ -14,24 +13,8 @@ export const activityHistoryWidget = {
   defaultState: {},
   async render(container, api) {
     const sourcePath = api.widgetData.config.sourcePath || "/";
-    const metrics = getExecutionMetrics(api);
-    const items = [
-      { label: "Obsidian days", value: api.snapshot.obsidianDays ?? "—" },
-      { label: "Notes", value: api.snapshot.files.length },
-      { label: "Open", value: api.snapshot.openTaskCount },
-      { label: "Done", value: api.snapshot.doneTaskCount },
-      metrics.projects,
-      metrics.pomodoro,
-      metrics.habits
-    ];
-    const toolbar = container.createDiv({ cls: "yh-activity-toolbar" });
-    const metricGrid = toolbar.createDiv({ cls: "yh-activity-metrics" });
-    for (const metric of items) {
-      const item = metricGrid.createDiv({ cls: "yh-activity-metric" });
-      item.createDiv({ cls: "yh-activity-metric-value", text: String(metric.value) });
-      item.createDiv({ cls: "yh-activity-metric-label", text: metric.label });
-    }
-    const yearSlot = toolbar.createDiv({ cls: "yh-activity-year-slot" });
+    const yearRow = container.createDiv({ cls: "yh-activity-year-row" });
+    const yearSlot = yearRow.createDiv({ cls: "yh-activity-year-slot" });
     const host = container.createDiv({ cls: "yh-activity-wrap" });
     await MarkdownRenderer.renderMarkdown(
       `\`\`\`ActivityHistory\n${sourcePath}\n\`\`\``,

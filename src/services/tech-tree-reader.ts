@@ -8,16 +8,7 @@ const {
 const DEFAULT_AREA_ROOT = "20_Areas";
 const DEFAULT_ACTIVE_PROJECT_ROOT = "10_Projects/进行中";
 
-const VALUE_GROUPS = [
-  { id: "care-self", title: "照顾自己" },
-  { id: "run-life", title: "经营生活" },
-  { id: "understand-world", title: "理解世界" },
-  { id: "relate-others", title: "与人相处" },
-  { id: "express-create", title: "表达与创造" },
-  { id: "make-things-happen", title: "推动事情" }
-];
 
-const VALUE_GROUP_BY_TITLE = new Map(VALUE_GROUPS.map((group) => [group.title, group]));
 
 function withinFolder(path: string, folder: string): boolean {
   const normalizedPath = normalizePath(path);
@@ -41,8 +32,9 @@ function getValueGroup(frontmatter: any): any | null {
     const tag = String(rawTag || "").trim().replace(/^#/, "");
     if (!tag.startsWith("value/")) continue;
     const valueTitle = tag.slice("value/".length).split("/")[0];
-    const group = VALUE_GROUP_BY_TITLE.get(valueTitle);
-    if (group) return group;
+    if (valueTitle) {
+      return { id: valueTitle, title: valueTitle };
+    }
   }
   return null;
 }
@@ -95,8 +87,7 @@ export async function readTechTreeData(app: any, sourcePath: string, options: an
   const markdownFiles = app.vault.getMarkdownFiles();
   const areaFiles = markdownFiles.filter((candidate: any) => {
     if (!withinFolder(candidate.path, areaRoot)) return false;
-    const frontmatter = getFrontmatter(app, candidate);
-    return String(frontmatter.type || "").toLowerCase() === "area";
+    return Boolean(getValueGroup(getFrontmatter(app, candidate)));
   });
 
   const areaByKey = new Map<string, any>();
@@ -109,13 +100,19 @@ export async function readTechTreeData(app: any, sourcePath: string, options: an
   const nodes: any[] = [];
   const areaNodeByPath = new Map<string, any>();
   const warnings: string[] = [];
+  const discoveredGroups: any[] = [];
+  const groupSet = new Set<string>();
 
   for (const areaFile of areaFiles) {
     const frontmatter = getFrontmatter(app, areaFile);
     const group = getValueGroup(frontmatter);
     if (!group) {
-      warnings.push(`${areaFile.basename} is missing a supported value/* tag.`);
+      warnings.push(`${areaFile.basename} is missing a value/* tag.`);
       continue;
+    }
+    if (!groupSet.has(group.id)) {
+      groupSet.add(group.id);
+      discoveredGroups.push(group);
     }
 
     const node = {
@@ -174,12 +171,12 @@ export async function readTechTreeData(app: any, sourcePath: string, options: an
   }
 
   nodes.sort((a, b) => {
-    const groupA = VALUE_GROUPS.findIndex((group) => group.id === a.group);
-    const groupB = VALUE_GROUPS.findIndex((group) => group.id === b.group);
+    const groupA = discoveredGroups.findIndex((group) => group.id === a.group);
+    const groupB = discoveredGroups.findIndex((group) => group.id === b.group);
     return groupA - groupB
       || Number(a.level || 0) - Number(b.level || 0)
       || String(a.title || "").localeCompare(String(b.title || ""), "zh-CN");
   });
 
-  return { file, groups: VALUE_GROUPS, nodes, warnings };
+  return { file, groups: discoveredGroups, nodes, warnings };
 }

@@ -12,6 +12,7 @@ import { buildResponsiveLayout, getResponsiveColumnCount } from "../src/layout/r
 import { createWidgetRegistry } from "../src/widgets/registry";
 import { calculateObsidianUsageDays } from "../src/services/obsidian-usage";
 import { countDistinctCompletionDays } from "../src/widgets/widget-api";
+import { parseBookmarks } from "../src/widgets/bookmarks";
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -87,6 +88,26 @@ function run() {
 
   // --- full normalize with registry defs ---
   const registry = createWidgetRegistry(null);
+  const expectedWidgetCatalog = {
+    focus: "Focus",
+    projects: "Projects",
+    tasks: "Tasks",
+    calendar: "Calendar",
+    pomodoro: "Pomodoro",
+    "music-player": "Music Player",
+    habits: "Habits",
+    bookmarks: "Bookmarks",
+    "quick-actions": "System",
+    "stats-overview": "Execution Overview",
+    "tech-tree": "Tech Tree",
+    "activity-history": "Activity History"
+  };
+  assert(registry.length === Object.keys(expectedWidgetCatalog).length, "Add Widget registry includes every widget");
+  for (const [type, displayName] of Object.entries(expectedWidgetCatalog)) {
+    const definition = registry.find((item) => item.type === type);
+    assert(definition, `Add Widget registry includes ${type}`);
+    assert(definition.displayName === displayName, `${type} display name matches the widget catalog`);
+  }
   const getDefinition = (type) => registry.find((item) => item.type === type);
 
   const normalized = normalizeData(raw, {
@@ -212,6 +233,15 @@ function run() {
   assert(badPomo.workMinutes === 180, "workMinutes clamped to max 180");
   assert(badPomo.breakMinutes === 1, "breakMinutes clamped to min 1");
 
+  const musicConfig = validateWidgetConfig(
+    "music-player",
+    { title: "music", serviceName: "NetEase", loginUrl: "", playUrl: "https://music.163.com/#/playlist?id=1" },
+    { title: "music player", serviceName: "NetEase Cloud Music", loginUrl: "https://music.163.com/", playUrl: "https://music.163.com/" }
+  );
+  assert(musicConfig.serviceName === "NetEase", "music service name preserved");
+  assert(musicConfig.loginUrl === "https://music.163.com/", "empty music login URL falls back");
+  assert(musicConfig.playUrl === "https://music.163.com/#/playlist?id=1", "music play URL preserved");
+
   const badState = validateWidgetState(
     "pomodoro",
     { status: "explode", remainingSeconds: -10, todayCount: -1 },
@@ -220,6 +250,29 @@ function run() {
   assert(badState.status === "idle", "invalid pomodoro status falls back");
   assert(badState.remainingSeconds === 0, "remainingSeconds clamped >= 0");
   assert(badState.todayCount === 0, "todayCount clamped >= 0");
+
+  const parsedBookmarks = parseBookmarks("Grok|https://grok.com\nhttps://chatgpt.com");
+  assert(parsedBookmarks.length === 2, "bookmark settings parse label URLs and direct URLs");
+  assert(parsedBookmarks[0].label === "Grok", "bookmark parser keeps explicit label");
+  assert(parsedBookmarks[1].label === "chatgpt.com", "bookmark parser derives direct URL label");
+
+  const bookmarkConfig = validateWidgetConfig(
+    "bookmarks",
+    {
+      title: "bookmarks",
+      variant: "grid",
+      useFavicons: true,
+      items: [
+        { label: "Grok", type: "url", value: "https://grok.com" },
+        { label: "chatgpt.com", type: "url", value: "https://chatgpt.com" }
+      ]
+    },
+    { title: "bookmarks", variant: "grid", items: [] }
+  );
+  assert(bookmarkConfig.items.length === 2, "bookmark settings preserve saved URLs");
+  assert(bookmarkConfig.items[0].label === "Grok", "bookmark label preserved");
+  assert(bookmarkConfig.items[1].value === "https://chatgpt.com", "direct URL bookmark preserved");
+  assert(bookmarkConfig.useFavicons === true, "bookmark favicon preference preserved");
 
   // empty / garbage raw must not throw
   const emptyNorm = normalizeData(null, {

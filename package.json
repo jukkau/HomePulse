@@ -1,7 +1,7 @@
 {
   "name": "yuki-homepage",
-  "version": "0.1.1",
-  "description": "A component-based Obsidian homepage dashboard.",
+  "version": "0.1.2",
+  "description": "A component-based personal homepage dashboard with widgets, layouts, and knowledge workflow tools.",
   "main": "main.js",
   "scripts": {
     "build": "node esbuild.config.mjs production",
@@ -18,7 +18,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "builtin-modules": "^5.0.0",
+    "builtin-modules": "^4.0.0",
     "esbuild": "^0.25.0",
     "obsidian": "^1.8.7",
     "typescript": "^5.8.0"

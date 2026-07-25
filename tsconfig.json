@@ -9,10 +9,10 @@
     ],
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "outDir": "dist",
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
     "target": "ES2022",
     "types": [
       "node"
