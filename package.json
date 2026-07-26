@@ -1,5 +1,5 @@
 {
-  "name": "yuki-homepage",
+  "name": "homepulse",
   "version": "0.1.2",
   "description": "A component-based personal homepage dashboard with widgets, layouts, and knowledge workflow tools.",
   "main": "main.js",

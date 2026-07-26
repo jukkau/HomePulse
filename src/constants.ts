@@ -1,5 +1,5 @@
 export const VIEW_TYPE = "yuki-homepage-view";
-export const VIEW_NAME = "Yuki Homepage";
+export const VIEW_NAME = "HomePulse";
 export const VIEW_ICON = "home";
 
 export const DEFAULT_TECH_TREE_SOURCE = "99_Meta_System/\u80fd\u529b\u5730\u56fe.md";

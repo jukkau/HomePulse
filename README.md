@@ -1,4 +1,4 @@
-# Yuki Homepage
+# HomePulse
 
 A local-first Obsidian homepage plugin that brings focus, execution pulse, knowledge profile, activity heatmap, and a capability map into one cohesive dashboard. Built with a draggable grid layout and responsive compact reflow for both 14-inch laptops and widescreen displays.
 
@@ -42,13 +42,13 @@ The default homepage layout is organized as:
 
 ## Plugin Dependencies
 
-Yuki Homepage is self-contained and does not require any community plugin. Widget data is read directly from your local markdown files, including task checkboxes, frontmatter metadata, and file timestamps.
+HomePulse is self-contained and does not require any community plugin. Widget data is read directly from your local markdown files, including task checkboxes, frontmatter metadata, and file timestamps.
 
 | Plugin | Requirement | When it is used |
 |---|---|---|
 | **Daily Notes** | Optional core plugin | Required only when a System item uses the `daily-note` action. Without it, only that button is unavailable. |
 | **QuickAdd** | Optional community plugin | Required only when you configure a System command such as `quickadd:runQuickAdd`. It is not included in the public defaults. |
-| **cMenu** | Not required | Yuki Homepage has no cMenu integration or dependency. |
+| **cMenu** | Not required | HomePulse has no cMenu integration or dependency. |
 
 Other community plugins, including Tasks and ActivityWatch-style plugins, are not required. Tasks are read from markdown checkboxes, while Activity History is generated from local file modification timestamps.
 
@@ -61,7 +61,7 @@ Music Player opens the configured music service URL in your browser. It does not
 ### From Obsidian Community Plugins
 
 1. Open Obsidian → Settings → Community Plugins
-2. Search for "Yuki Homepage"
+2. Search for "HomePulse"
 3. Install and enable
 
 ### Manual
@@ -72,7 +72,7 @@ Copy this directory into your vault:
 .obsidian/plugins/yuki-homepage/
 `
 
-Then enable **Yuki Homepage** in Settings → Community Plugins.
+Then enable **HomePulse** in Settings → Community Plugins.
 
 ## Configuration
 

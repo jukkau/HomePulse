@@ -129,7 +129,10 @@ function run() {
     normalized.settings.obsidianStartDate === raw.settings.obsidianStartDate,
     "configured start date preserved"
   );
-  assert(normalized.settings.profileName === "Yuki", "header username preserved");
+  assert(
+    normalized.settings.profileName === raw.settings.profileName,
+    "header username preserved"
+  );
   assert(normalized.settings.lockHomepage === true, "homepage lock defaults to enabled");
   assert(calculateObsidianUsageDays("2026-07-18", new Date(2026, 6, 18)) === 1, "start day counts as day one");
   assert(calculateObsidianUsageDays("2026-07-17", new Date(2026, 6, 18)) === 2, "usage counts inclusively");

@@ -410,7 +410,7 @@ class YukiHomepageSettingTab extends PluginSettingTab {
         button.setCta();
         button.onClick(async () => {
           await this.plugin.saveCurrentLayoutAsDefault();
-          new Notice("Current Yuki Homepage layout saved as default.");
+          new Notice("Current HomePulse layout saved as default.");
         });
       });
 
@@ -423,7 +423,7 @@ class YukiHomepageSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           if (!(await confirmResetLayout(this.app))) return;
           await this.plugin.resetToDefaults();
-          new Notice("Yuki Homepage layout reset.");
+          new Notice("HomePulse layout reset.");
         });
       });
   }
@@ -807,7 +807,7 @@ class YukiHomepagePlugin extends Plugin {
     this.refreshTimer = 0;
 
     this.registerView(VIEW_TYPE, (leaf) => new YukiHomepageView(leaf, this));
-    this.addRibbonIcon(VIEW_ICON, "Open Yuki Homepage", () => {
+    this.addRibbonIcon(VIEW_ICON, "Open HomePulse", () => {
       void this.openHomepage();
     });
     this.addCommand({

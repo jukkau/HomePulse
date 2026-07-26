@@ -1,6 +1,6 @@
 # UI Credits
 
-The visual language of Yuki Homepage is inspired by and adapts **Dashboard-Komorebi.css** (Komorebi / Catppuccin style).
+The visual language of HomePulse is inspired by and adapts **Dashboard-Komorebi.css** (Komorebi / Catppuccin style).
 
 ## Primary Reference
 
@@ -9,7 +9,7 @@ The visual language of Yuki Homepage is inspired by and adapts **Dashboard-Komor
 
 ## Usage in This Project
 
-Yuki Homepage adapts the Komorebi / Catppuccin visual language into a native Obsidian plugin architecture. The adaptation transforms the original CSS-only approach into a component-based widget system with grid layout, drag editing, and interactive workflow tools.
+HomePulse adapts the Komorebi / Catppuccin visual language into a native Obsidian plugin architecture. The adaptation transforms the original CSS-only approach into a component-based widget system with grid layout, drag editing, and interactive workflow tools.
 
 ## Attribution
 
