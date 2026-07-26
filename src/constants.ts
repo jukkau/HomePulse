@@ -1,4 +1,4 @@
-export const VIEW_TYPE = "yuki-homepage-view";
+export const VIEW_TYPE = "homepulse-view";
 export const VIEW_NAME = "HomePulse";
 export const VIEW_ICON = "home";
 

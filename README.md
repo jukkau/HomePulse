@@ -69,7 +69,7 @@ Music Player opens the configured music service URL in your browser. It does not
 Copy this directory into your vault:
 
 `
-.obsidian/plugins/yuki-homepage/
+.obsidian/plugins/homepulse/
 `
 
 Then enable **HomePulse** in Settings → Community Plugins.

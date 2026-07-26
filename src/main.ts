@@ -811,7 +811,7 @@ class YukiHomepagePlugin extends Plugin {
       void this.openHomepage();
     });
     this.addCommand({
-      id: "open-yuki-homepage",
+      id: "open-homepulse",
       name: `Open ${VIEW_NAME}`,
       callback: () => {
         void this.openHomepage();
