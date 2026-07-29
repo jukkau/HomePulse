@@ -1,9 +1,11 @@
-import { DEFAULT_TECH_TREE_SOURCE, PROJECT_ROOT } from "../constants";
+import { DEFAULT_TECH_TREE_SOURCE } from "../constants";
 import { readTechTreeData } from "./tech-tree-reader";
 import { calculateObsidianUsageDays } from "./obsidian-usage";
 import { normalizeArray } from "../core/utils";
 import { localDateKey, reconcilePomodoroState } from "../widgets/widget-api";
 import { normalizePath } from "obsidian";
+import { matchesProjectFilter, type ProjectFilterDefaults } from "./project-filter";
+import { getTimeRange } from "./time/TimeAggregation";
 
 function startOfWeek(date: Date): Date {
   const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -87,7 +89,7 @@ export class SnapshotBuilder {
 
   async load(): Promise<this> {
     this.files = this.app.vault.getMarkdownFiles();
-    this.projectFiles = this.files.filter((file) => withinFolder(file.path, PROJECT_ROOT));
+    this.projectFiles = this.files;
     this.computeVaultUsage();
     this.indexDailyNotes();
     await this.indexProjectsAndTasks();
@@ -133,10 +135,22 @@ export class SnapshotBuilder {
     this.habitDailyLast7 = habitBuckets;
     this.habitStreakDays = this.countHabitStreakDays(habits, completions);
 
-    const pomodoroConfig = this.plugin.getFirstWidgetConfig("pomodoro");
-    const pomodoroState = reconcilePomodoroState(this.plugin.findFirstWidgetState("pomodoro"), pomodoroConfig);
-    this.pomodoroToday = Number(pomodoroState.todayCount) || 0;
-    this.pomodoroMinutesToday = (Number(pomodoroConfig.workMinutes) || 25) * this.pomodoroToday;
+    const todayRange = getTimeRange("today", this.now);
+    const pomodoroLogs = this.plugin.getTimeLogService().query({
+      source: "pomodoro",
+      startDate: todayRange.start,
+      endDate: todayRange.end
+    });
+    const todaySummary = this.plugin.getTimeAggregation().summarize("today", this.now);
+    this.pomodoroToday = pomodoroLogs.length;
+    this.pomodoroMinutesToday = todaySummary.totalDuration;
+
+    if (!this.pomodoroMinutesToday) {
+      const pomodoroConfig = this.plugin.getFirstWidgetConfig("pomodoro");
+      const pomodoroState = reconcilePomodoroState(this.plugin.findFirstWidgetState("pomodoro"), pomodoroConfig);
+      this.pomodoroToday = Number(pomodoroState.todayCount) || 0;
+      this.pomodoroMinutesToday = (Number(pomodoroConfig.workMinutes) || 25) * this.pomodoroToday;
+    }
   }
 
   countHabitStreakDays(habits: string[], completions: Record<string, boolean>): number {
@@ -241,15 +255,15 @@ export class SnapshotBuilder {
     );
   }
 
-  getProjects(folders: string[], limit: number): any[] {
+  getProjects(filter: Required<ProjectFilterDefaults>, limit: number): any[] {
     const list = this.projectIndex
-      .filter((item) => folders.some((folder) => withinFolder(item.path, folder)))
+      .filter((item) => matchesProjectFilter(this.app, item.file, filter))
       .sort((a, b) => b.mtime - a.mtime);
     return limit > 0 ? list.slice(0, limit) : list;
   }
 
-  getOpenTasks(folders: string[], limit: number): any[] {
-    const list = this.taskIndex.filter((item) => folders.some((folder) => withinFolder(item.path, folder)));
+  getOpenTasks(filter: Required<ProjectFilterDefaults>, limit: number): any[] {
+    const list = this.taskIndex.filter((item) => matchesProjectFilter(this.app, item.file, filter));
     return limit > 0 ? list.slice(0, limit) : list;
   }
 

@@ -12,7 +12,7 @@
  */
 
 export const DEFAULT_DATA = {
-  schemaVersion: 1,
+  schemaVersion: 2,
 
   /** false when a user first installs the plugin */
   initialized: false,
@@ -20,7 +20,9 @@ export const DEFAULT_DATA = {
   settings: {
     openOnStartup: true,
     lockHomepage: true,
+    language: "en",
     themePreset: "petal",
+    accentColor: "#f5c2e7",
     profileName: "My Homepage",
     profileSignature: "",
     obsidianStartDate: "",
@@ -49,9 +51,40 @@ export const DEFAULT_DATA = {
     ]
   },
 
+  layoutPresets: [
+    {
+      id: "public-default",
+      name: "Public default",
+      isBuiltIn: true,
+      layout: {
+        columns: 5,
+        widgets: [
+          { id: "focus-main", type: "focus", x: 0, y: 0, sizePreset: "W1H1" },
+          { id: "knowledge-main", type: "knowledge-profile", x: 1, y: 0, sizePreset: "W2H1" },
+          { id: "music-player-b5317ac", type: "music-player", x: 3, y: 0, sizePreset: "W2H1" },
+          { id: "habits-b0sr8rf", type: "habits", x: 0, y: 1, sizePreset: "W2H2" },
+          { id: "pomodoro-64kmxai", type: "pomodoro", x: 2, y: 1, sizePreset: "W1H2" },
+          { id: "tasks-lt2bqf1", type: "tasks", x: 3, y: 1, sizePreset: "W1H4" },
+          { id: "calendar-1hcbws7", type: "calendar", x: 4, y: 1, sizePreset: "W1H2" },
+          { id: "stats-main", type: "stats-overview", x: 0, y: 3, sizePreset: "W3H2" },
+          { id: "bookmarks-b1qil66", type: "bookmarks", x: 4, y: 3, sizePreset: "W1H2" },
+          { id: "tech-tree-main", type: "tech-tree", x: 0, y: 5, sizePreset: "W2H4" },
+          { id: "projects-3fn9vd3", type: "projects", x: 2, y: 5, sizePreset: "W1H2" },
+          { id: "recent-notes-xmng40z", type: "recent-notes", x: 3, y: 5, sizePreset: "W1H2" },
+          { id: "quick-actions-0h6rh95", type: "quick-actions", x: 4, y: 5, sizePreset: "W1H2" },
+          { id: "activity-main", type: "activity-history", x: 2, y: 7, sizePreset: "W3H2" }
+        ]
+      }
+    }
+  ],
+
+  defaultLayoutPresetId: "public-default",
+
+  timeLogs: [],
+
   widgets: {
     "focus-main": {
-      config: { title: "focus today", placeholder: "define your focus..." },
+      config: { title: "today's goal", placeholder: "define your focus..." },
       state: { text: "" }
     },
     "stats-main": {
@@ -87,20 +120,30 @@ export const DEFAULT_DATA = {
       config: {
         title: "pomodoro",
         workMinutes: 25,
-        breakMinutes: 5
+        breakMinutes: 5,
+        projectFolders: [],
+        projectTags: ["type/project"],
+        projectNamePrefixes: ["Project_"],
+        areaFolders: ["20_Areas"],
+        areaTags: [],
+        areaNamePrefixes: ["Area_"],
+        taskFile: "10_Projects/进行中/QuickCapture.md"
       },
       state: {
         status: "idle",
         remainingSeconds: 1500,
         phaseStartedAt: 0,
         todayCountDate: "",
-        todayCount: 0
+        todayCount: 0,
+        recentTargets: []
       }
     },
     "tasks-lt2bqf1": {
       config: {
         title: "open tasks",
-        folders: [],
+        projectFolders: [],
+        projectTags: [],
+        projectNamePrefixes: ["Project_"],
         limit: 12
       },
       state: {}
@@ -121,7 +164,9 @@ export const DEFAULT_DATA = {
     "projects-3fn9vd3": {
       config: {
         title: "projects",
-        folders: [],
+        projectFolders: [],
+        projectTags: [],
+        projectNamePrefixes: ["Project_"],
         limit: 10
       },
       state: {}
@@ -144,11 +189,11 @@ export const DEFAULT_DATA = {
       },
       state: {}
     },
-    "tech-tree-main": { config: { title: "tech tree", sourcePath: "", areaRoot: "", activeProjectRoot: "" },
+    "tech-tree-main": { config: { title: "tech tree", sourcePath: "", areaRoot: "", projectFolders: ["10_Projects/进行中"], projectTags: ["type/project", "status/ing"], projectNamePrefixes: ["Project_"] },
       state: {}
     },
     "activity-main": {
-      config: { title: "activity history", sourcePath: "/" },
+      config: { title: "activity history", sourcePath: "/", year: "" },
       state: {}
     }
   }

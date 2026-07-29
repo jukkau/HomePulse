@@ -1,12 +1,14 @@
-// @ts-nocheck
-import { DEFAULT_TECH_TREE_SOURCE } from "../constants";
+﻿// @ts-nocheck
+import { DEFAULT_ACTIVE_PROJECT_TAGS, DEFAULT_PROJECT_NAME_PREFIXES, DEFAULT_TECH_TREE_SOURCE } from "../constants";
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { readProjectFilterConfig, renderProjectFilterSettings } from "../services/project-filter";
 import { readTechTreeData } from "../services/tech-tree-reader";
 import { renderEmpty } from "./widget-api";
 
 import { Setting, normalizePath } from "obsidian";
 
 const TREE_KINDS = new Set(["area", "moc", "project"]);
+const DEFAULT_TECH_TREE_PROJECT_FOLDERS = ["10_Projects/进行中"];
 
 function renderNode(container, node, childrenByParent, api, ancestry = new Set()) {
   const subtree = container.createDiv({ cls: `yh-tech-subtree yh-tech-subtree-${node.kind}` });
@@ -40,23 +42,32 @@ export const techTreeWidget = {
   shell: "canvas",
   allowedSizes: ALL_SIZE_PRESETS,
   defaultSize: { preset: "W4H1", w: 4, h: 1 },
-  defaultConfig: { title: "tech tree", sourcePath: "", areaRoot: "", activeProjectRoot: "" },
+  defaultConfig: {
+    title: "tech tree",
+    sourcePath: "",
+    areaRoot: "",
+    projectFolders: DEFAULT_TECH_TREE_PROJECT_FOLDERS,
+    projectTags: DEFAULT_ACTIVE_PROJECT_TAGS,
+    projectNamePrefixes: DEFAULT_PROJECT_NAME_PREFIXES,
+    activeProjectRoot: ""
+  },
   defaultState: {},
   async render(container, api) {
     const config = api.widgetData.config;
     const defaults = api.snapshot.techTreeSettings;
-    const hasOverride = Boolean(config.sourcePath || config.areaRoot || config.activeProjectRoot);
-    // The snapshot already read the tech tree with the global settings; only
-    // re-read when this widget overrides one of them.
-    let data;
-    if (!hasOverride) {
-      data = api.snapshot.techTree;
-    } else {
-      const sourcePath = normalizePath(config.sourcePath || defaults.source || DEFAULT_TECH_TREE_SOURCE);
-      const areaRoot = config.areaRoot || defaults.areaRoot;
-      const activeProjectRoot = config.activeProjectRoot || defaults.activeProjectRoot;
-      data = await readTechTreeData(api.app, sourcePath, { areaRoot, activeProjectRoot });
-    }
+    const sourcePath = normalizePath(config.sourcePath || defaults.source || DEFAULT_TECH_TREE_SOURCE);
+    const areaRoot = config.areaRoot || defaults.areaRoot;
+    const projectFilter = readProjectFilterConfig(config, {
+      folders: DEFAULT_TECH_TREE_PROJECT_FOLDERS,
+      tags: DEFAULT_ACTIVE_PROJECT_TAGS,
+      namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
+    });
+    const data = await readTechTreeData(api.app, sourcePath, {
+      areaRoot,
+      projectFolders: projectFilter.folders,
+      projectTags: projectFilter.tags,
+      projectNamePrefixes: projectFilter.namePrefixes
+    });
     if (!data || data.error) {
       renderEmpty(container, data && data.error ? data.error : "No tech tree data available.");
       return;
@@ -123,11 +134,10 @@ export const techTreeWidget = {
         draft.areaRoot = value.trim();
       });
     });
-    new Setting(container).setName("Project folder").setDesc("Optional. Overrides the global active project folder for this widget.").addText((text) => {
-      text.setValue(draft.activeProjectRoot || "");
-      text.onChange((value) => {
-        draft.activeProjectRoot = value.trim();
-      });
+    renderProjectFilterSettings(container, draft, {
+      folders: DEFAULT_TECH_TREE_PROJECT_FOLDERS,
+      tags: DEFAULT_ACTIVE_PROJECT_TAGS,
+      namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
     });
   }
 };

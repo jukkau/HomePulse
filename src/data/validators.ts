@@ -3,11 +3,25 @@
 // Migration note: minimal validation for widget config/state and layout items.
 // Invalid values fall back to defaults; never throw — one bad widget must not crash the homepage.
 
-import { parseQuickActions, normalizeArray } from "../widgets/widget-api";
+import { DEFAULT_ACTIVE_PROJECT_TAGS, DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
+import { parseLineList, parseQuickActions, normalizeArray } from "../widgets/widget-api";
 import { isKnownSizePreset } from "../layout/size-presets";
+import type { TimeLog, TimeLogActivityType, TimeLogSource, TimeLogTargetType } from "../types";
 
 const POMO_STATUS = new Set(["idle", "running", "paused", "break"]);
 const QUICK_ACTION_TYPES = new Set(["command", "url", "daily-note"]);
+const TIME_LOG_SOURCES = new Set<TimeLogSource>(["pomodoro", "manual"]);
+const TIME_LOG_TARGET_TYPES = new Set<TimeLogTargetType>(["project", "area", "task", "quick"]);
+const TIME_LOG_ACTIVITY_TYPES = new Set<TimeLogActivityType>([
+  "work",
+  "learning",
+  "creative",
+  "exercise",
+  "reading",
+  "travel",
+  "other"
+]);
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 export function clampNumber(value: any, min: number, max: number, fallback: number): number {
   const n = Number(value);
@@ -21,8 +35,9 @@ export function asString(value: any, fallback = ""): string {
 }
 
 export function asStringArray(value: any, fallback: any = []): string[] {
-  if (!Array.isArray(value)) return Array.isArray(fallback) ? fallback.slice() : [];
-  return value.map((item) => String(item).trim()).filter(Boolean);
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  if (typeof value === "string") return parseLineList(value);
+  return Array.isArray(fallback) ? fallback.slice() : [];
 }
 
 export function asPlainObject(value: any, fallback: any = {}): any {
@@ -59,14 +74,25 @@ export function validateWidgetConfig(type: string, config: any, defaultConfig: a
   switch (type) {
     case "focus":
       next.title = asString(raw.title, base.title || "today's goal");
+      if (next.title.trim().toLowerCase() === "focus today") {
+        next.title = "today's goal";
+      }
       next.placeholder = asString(raw.placeholder, base.placeholder || "");
       break;
 
     case "projects":
     case "tasks":
       next.title = asString(raw.title, base.title || type);
-      next.folders = asStringArray(raw.folders, base.folders || []);
+      next.projectFolders = asStringArray(raw.projectFolders ?? raw.folders, base.projectFolders || base.folders || []);
+      next.projectTags = asStringArray(raw.projectTags ?? raw.tags, base.projectTags || []);
+      next.projectNamePrefixes = asStringArray(
+        raw.projectNamePrefixes ?? raw.namePrefixes,
+        base.projectNamePrefixes || DEFAULT_PROJECT_NAME_PREFIXES
+      );
       next.limit = clampNumber(raw.limit, 1, 200, Number(base.limit) || 10);
+      delete next.folders;
+      delete next.tags;
+      delete next.namePrefixes;
       break;
 
     case "calendar":
@@ -77,6 +103,14 @@ export function validateWidgetConfig(type: string, config: any, defaultConfig: a
       next.title = asString(raw.title, base.title || "pomodoro");
       next.workMinutes = clampNumber(raw.workMinutes, 1, 180, Number(base.workMinutes) || 25);
       next.breakMinutes = clampNumber(raw.breakMinutes, 1, 60, Number(base.breakMinutes) || 5);
+      next.projectFolders = asStringArray(raw.projectFolders, base.projectFolders || []);
+      next.projectTags = asStringArray(raw.projectTags, base.projectTags || ["type/project"]);
+      next.projectNamePrefixes = asStringArray(raw.projectNamePrefixes, base.projectNamePrefixes || ["Project_"]);
+      next.areaFolders = asStringArray(raw.areaFolders, base.areaFolders || ["20_Areas"]);
+      next.areaTags = asStringArray(raw.areaTags, base.areaTags || []);
+      next.areaNamePrefixes = asStringArray(raw.areaNamePrefixes, base.areaNamePrefixes || ["Area_"]);
+      next.taskFile = asString(raw.taskFile, base.taskFile || "10_Projects/进行中/QuickCapture.md").trim()
+        || "10_Projects/进行中/QuickCapture.md";
       break;
 
     case "music-player":
@@ -158,6 +192,11 @@ export function validateWidgetConfig(type: string, config: any, defaultConfig: a
       delete next.metrics;
       break;
 
+    case "time-flow":
+      next.title = asString(raw.title, base.title || "time flow");
+      next.recentLimit = clampNumber(raw.recentLimit, 3, 10, Number(base.recentLimit) || 6);
+      break;
+
     case "knowledge-profile":
       next.title = asString(raw.title, base.title || "knowledge profile");
       next.projectNamePrefixes = asStringArray(
@@ -173,11 +212,22 @@ export function validateWidgetConfig(type: string, config: any, defaultConfig: a
     case "tech-tree":
       next.title = asString(raw.title, base.title || "tech tree");
       next.sourcePath = asString(raw.sourcePath, base.sourcePath || "").trim();
+      next.areaRoot = asString(raw.areaRoot, base.areaRoot || "").trim();
+      next.projectFolders = asStringArray(raw.projectFolders ?? raw.activeProjectRoot, base.projectFolders || []);
+      next.projectTags = asStringArray(raw.projectTags, base.projectTags || DEFAULT_ACTIVE_PROJECT_TAGS);
+      next.projectNamePrefixes = asStringArray(
+        raw.projectNamePrefixes,
+        base.projectNamePrefixes || DEFAULT_PROJECT_NAME_PREFIXES
+      );
+      delete next.activeProjectRoot;
       break;
 
     case "activity-history":
       next.title = asString(raw.title, base.title || "activity history");
       next.sourcePath = asString(raw.sourcePath, base.sourcePath || "/").trim() || "/";
+      next.year = /^\d{4}$/.test(asString(raw.year, base.year || "").trim())
+        ? asString(raw.year, base.year || "").trim()
+        : "";
       break;
 
     default:
@@ -202,7 +252,7 @@ export function validateWidgetState(type: string, state: any, defaultState: any 
     case "pomodoro": {
       const workMinutes = 25;
       const status = POMO_STATUS.has(raw.status) ? raw.status : base.status || "idle";
-      return {
+      const next: any = {
         status,
         remainingSeconds: clampNumber(
           raw.remainingSeconds,
@@ -214,6 +264,14 @@ export function validateWidgetState(type: string, state: any, defaultState: any 
         todayCountDate: asString(raw.todayCountDate, base.todayCountDate || ""),
         todayCount: clampNumber(raw.todayCount, 0, 9999, Number(base.todayCount) || 0)
       };
+      const activeTarget = validatePomodoroTarget(raw.activeTarget);
+      if (activeTarget) next.activeTarget = activeTarget;
+      const recentTargets = normalizeArray(raw.recentTargets, [])
+        .map((item: any) => validatePomodoroTarget(item))
+        .filter(Boolean)
+        .slice(0, 8);
+      if (recentTargets.length) next.recentTargets = recentTargets;
+      return next;
     }
 
     case "habits": {
@@ -254,7 +312,9 @@ export function validateSettings(settings: any, defaults: any): any {
   return {
     openOnStartup: typeof raw.openOnStartup === "boolean" ? raw.openOnStartup : Boolean(base.openOnStartup),
     lockHomepage: typeof raw.lockHomepage === "boolean" ? raw.lockHomepage : Boolean(base.lockHomepage),
+    language: "en",
     themePreset: asString(raw.themePreset, base.themePreset || "petal"),
+    accentColor: HEX_COLOR.test(asString(raw.accentColor, "")) ? asString(raw.accentColor) : asString(base.accentColor, "#f5c2e7"),
     profileName: asString(raw.profileName, base.profileName || "Your name"),
     profileSignature: asString(raw.profileSignature, base.profileSignature || "A personal Obsidian homepage"),
     obsidianStartDate: /^\d{4}-\d{2}-\d{2}$/.test(asString(raw.obsidianStartDate))
@@ -264,6 +324,89 @@ export function validateSettings(settings: any, defaults: any): any {
     techTreeAreaRoot: asString(raw.techTreeAreaRoot, base.techTreeAreaRoot || "20_Areas"),
     techTreeActiveProjectRoot: asString(raw.techTreeActiveProjectRoot, base.techTreeActiveProjectRoot || "10_Projects/进行中")
   };
+}
+
+export function validateTimeLog(raw: any): TimeLog | null {
+  const item = asPlainObject(raw, null);
+  if (!item) return null;
+
+  const source = TIME_LOG_SOURCES.has(item.source) ? item.source : null;
+  const targetType = TIME_LOG_TARGET_TYPES.has(item.targetType) ? item.targetType : null;
+  if (!source || !targetType) return null;
+
+  const startTime = clampNumber(item.startTime, 0, Number.MAX_SAFE_INTEGER, 0);
+  const endTime = clampNumber(item.endTime, 0, Number.MAX_SAFE_INTEGER, 0);
+  if (!startTime || !endTime || endTime < startTime) return null;
+
+  const computedDuration = Math.max(1, Math.round((endTime - startTime) / 60000));
+  const duration = clampNumber(item.duration, 1, 24 * 60 * 7, computedDuration);
+  const targetId = normalizeTimeTargetId(targetType, item.targetId);
+  if (!targetId) return null;
+
+  const next: TimeLog = {
+    id: asString(item.id, "").trim() || `timelog-${item.createdAt || Date.now()}`,
+    startTime,
+    endTime,
+    duration,
+    source,
+    targetType,
+    targetId,
+    createdAt: clampNumber(item.createdAt, 0, Number.MAX_SAFE_INTEGER, Date.now())
+  };
+
+  const note = asString(item.note, "").trim();
+  if (note) next.note = note;
+
+  if (TIME_LOG_ACTIVITY_TYPES.has(item.activityType)) {
+    next.activityType = item.activityType;
+  }
+
+  if (targetType === "project") {
+    next.projectId = targetId;
+    next.projectTitle = asString(item.projectTitle, targetId).trim() || targetId;
+    const areaId = asString(item.areaId, "").trim();
+    if (areaId) {
+      next.areaId = areaId;
+      next.areaTitle = asString(item.areaTitle, areaId).trim() || areaId;
+    }
+  } else if (targetType === "area") {
+    next.areaId = targetId;
+    next.areaTitle = asString(item.areaTitle, targetId).trim() || targetId;
+  } else if (targetType === "task") {
+    next.taskId = targetId;
+  }
+
+  return next;
+}
+
+export function validateTimeLogs(value: any): TimeLog[] {
+  return normalizeArray(value, [])
+    .map((item: any) => validateTimeLog(item))
+    .filter((item: TimeLog | null): item is TimeLog => Boolean(item))
+    .sort((a: TimeLog, b: TimeLog) => b.startTime - a.startTime);
+}
+
+function normalizeTimeTargetId(targetType: TimeLogTargetType, value: any): string {
+  if (targetType === "task") return asString(value, "QuickCapture").trim() || "QuickCapture";
+  return asString(value, "").trim();
+}
+
+function validatePomodoroTarget(raw: any): any | null {
+  const item = asPlainObject(raw, null);
+  if (!item) return null;
+  const type = TIME_LOG_TARGET_TYPES.has(item.type) ? item.type : null;
+  const id = type === "task" ? asString(item.id, "QuickCapture").trim() : asString(item.id, "").trim();
+  const title = type === "task" ? asString(item.title, id || "QuickCapture").trim() : asString(item.title, id).trim();
+  if (!type || !id || !title) return null;
+  const next: any = { type, id, title };
+  if (type === "project") {
+    const areaId = asString(item.areaId, "").trim();
+    if (areaId) {
+      next.areaId = areaId;
+      next.areaTitle = asString(item.areaTitle, areaId).trim() || areaId;
+    }
+  }
+  return next;
 }
 
 // Re-export helpers widgets may need when wiring settings patches.

@@ -55,10 +55,11 @@ function run() {
 
   // --- migration only ---
   const migrated = migrateToLatest(raw);
-  assert(migrated.schemaVersion === CURRENT_SCHEMA_VERSION, "schemaVersion should be 1");
+  assert(migrated.schemaVersion === CURRENT_SCHEMA_VERSION, "schemaVersion should be current");
   assert(migrated.settings && typeof migrated.settings === "object", "settings object");
   assert(Array.isArray(migrated.layout.widgets), "layout.widgets array");
   assert(migrated.widgets && typeof migrated.widgets === "object", "widgets map");
+  assert(Array.isArray(migrated.timeLogs), "timeLogs array");
 
   const layoutIdsBefore = (raw.layout?.widgets || []).map((w) => w.id).filter(Boolean).sort();
   const layoutIdsAfter = migrated.layout.widgets.map((w) => w.id).filter(Boolean).sort();
@@ -89,7 +90,7 @@ function run() {
   // --- full normalize with registry defs ---
   const registry = createWidgetRegistry(null);
   const expectedWidgetCatalog = {
-    focus: "Focus",
+    focus: "Today's goal",
     projects: "Projects",
     tasks: "Tasks",
     calendar: "Calendar",
@@ -102,6 +103,7 @@ function run() {
     "knowledge-profile": "Knowledge Profile",
     "recent-notes": "Recent Notes",
     "tech-tree": "Tech Tree",
+    "time-flow": "Time Flow",
     "activity-history": "Activity History"
   };
   assert(registry.length === Object.keys(expectedWidgetCatalog).length, "Add Widget registry includes every widget");
@@ -122,9 +124,14 @@ function run() {
     getDefinition
   });
 
-  assert(normalized.schemaVersion === 1, "normalized schemaVersion");
-  assert(normalized.layout.columns === 5, "columns fixed to 5");
+  assert(normalized.schemaVersion === CURRENT_SCHEMA_VERSION, "normalized schemaVersion");
+  assert(normalized.layout.columns >= 1 && normalized.layout.columns <= 5, "layout columns stay in range");
+  assert(normalized.layout.columns === (raw.layout?.columns || 5), "saved layout columns preserved");
+  assert(normalized.layoutPresets?.find((preset) => preset.id === "public-default")?.layout.columns === 5, "public default columns fixed to 5");
   assert(normalized.layout.widgets.length > 0, "has widgets");
+  assert(Array.isArray(normalized.timeLogs), "normalized timeLogs array");
+  assert(normalized.settings.language === "en", "language defaults to English");
+  assert(/^#[0-9a-f]{6}$/i.test(normalized.settings.accentColor), "accent color is a hex value");
   assert(
     normalized.settings.obsidianStartDate === raw.settings.obsidianStartDate,
     "configured start date preserved"
@@ -145,7 +152,8 @@ function run() {
   }) === 2, "habit check-in days count distinct valid dates");
   assert(Object.keys(normalized.widgets).length === normalized.layout.widgets.length, "widget map matches layout");
 
-  assert(getResponsiveColumnCount(1201) === 5, "large layout has five columns");
+  assert(getResponsiveColumnCount(1741) === 5, "large layout has five columns");
+  assert(getResponsiveColumnCount(1201) === 5, "wide layout has five columns");
   assert(getResponsiveColumnCount(1000) === 3, "laptop layout has three columns");
   assert(getResponsiveColumnCount(800) === 2, "compact layout has two columns");
   assert(getResponsiveColumnCount(520) === 1, "phone layout has one column");
@@ -191,6 +199,33 @@ function run() {
   });
   assert(withSavedDefault.defaultLayout?.widgets.length === 1, "saved default layout preserved");
   assert(withSavedDefault.defaultLayout?.widgets[0].id === "saved-focus", "saved default widget preserved");
+
+  const customColumns = normalizeData({
+    ...raw,
+    layout: {
+      columns: 4,
+      widgets: raw.layout.widgets
+    },
+    layoutPresets: [{
+      id: "four-column",
+      name: "Four column",
+      layout: {
+        columns: 4,
+        widgets: raw.layout.widgets
+      }
+    }],
+    defaultLayoutPresetId: "four-column"
+  }, {
+    mergeDefaults,
+    normalizeArray,
+    randomId,
+    applySizePreset,
+    packLayout,
+    deepClone,
+    getDefinition
+  });
+  assert(customColumns.layout.columns === 4, "custom layout columns preserved");
+  assert(customColumns.layoutPresets?.find((preset) => preset.id === "four-column")?.layout.columns === 4, "preset columns preserved");
 
   for (const widget of normalized.layout.widgets) {
     assert(widget.id && widget.type, "layout item has id/type");
@@ -289,7 +324,7 @@ function run() {
     deepClone,
     getDefinition
   });
-  assert(emptyNorm.schemaVersion === 1, "null input yields schema 1");
+  assert(emptyNorm.schemaVersion === CURRENT_SCHEMA_VERSION, "null input yields current schema");
   assert(
     emptyNorm.layout.widgets.length === DEFAULT_DATA.layout.widgets.length,
     `null uses default layout (got ${emptyNorm.layout.widgets.length}, expected ${DEFAULT_DATA.layout.widgets.length})`

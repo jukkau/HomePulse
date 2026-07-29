@@ -1,6 +1,12 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { formatSeconds, reconcilePomodoroState } from "./widget-api";
+import { formatSeconds, parseLineList, reconcilePomodoroState } from "./widget-api";
+import {
+  listAreaTargets,
+  listProjectTargets,
+  quickCaptureTaskTarget,
+  quickTarget
+} from "../services/time/target-resolver";
 
 import { Modal, Setting, setIcon } from "obsidian";
 
@@ -62,19 +68,111 @@ class PomodoroSettingsModal extends Modal {
   }
 }
 
+class TargetSelectorModal extends Modal {
+  constructor(app, options, onSelect) {
+    super(app);
+    this.options = options;
+    this.onSelect = onSelect;
+    this.resolved = false;
+  }
+
+  resolve(target) {
+    if (this.resolved) return;
+    this.resolved = true;
+    this.onSelect(target);
+    this.close();
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    this.modalEl.addClass("yh-settings-shell");
+    contentEl.empty();
+    contentEl.addClass("yh-modal", "yh-settings-modal", "yh-target-modal");
+    contentEl.createEl("h2", { text: "Start focus" });
+    contentEl.createDiv({ cls: "yh-settings-subtitle", text: "Choose where this focus time should be counted." });
+    const body = contentEl.createDiv({ cls: "yh-settings-body" });
+
+    this.renderSection(body, "Recent", this.options.recentTargets || []);
+    this.renderSection(body, "Project", this.options.projectTargets || []);
+    this.renderSection(body, "Area", this.options.areaTargets || []);
+    this.renderSection(body, "Task", [this.options.taskTarget || quickCaptureTaskTarget()]);
+
+    const quickWrap = body.createDiv({ cls: "yh-target-section" });
+    quickWrap.createDiv({ cls: "yh-target-section-title", text: "Quick" });
+    const quickRow = quickWrap.createDiv({ cls: "yh-target-quick-row" });
+    const input = quickRow.createEl("input", {
+      type: "text",
+      placeholder: "Temporary focus..."
+    });
+    const button = quickRow.createEl("button", { text: "Start" });
+    button.addEventListener("click", () => {
+      const target = quickTarget(input.value);
+      if (target) this.resolve(target);
+    });
+
+    const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
+    cancel.addEventListener("click", () => this.resolve(null));
+  }
+
+  onClose() {
+    if (!this.resolved) this.resolve(null);
+  }
+
+  renderSection(parent, title, targets) {
+    const items = (targets || []).filter(Boolean);
+    if (!items.length) return;
+    const section = parent.createDiv({ cls: "yh-target-section" });
+    section.createDiv({ cls: "yh-target-section-title", text: title });
+    const grid = section.createDiv({ cls: "yh-target-grid" });
+    for (const target of items) {
+      const button = grid.createEl("button", { cls: `yh-target-choice is-${target.type}` });
+      button.createSpan({ cls: "yh-target-choice-title", text: target.title });
+      button.createSpan({ cls: "yh-target-choice-type", text: target.type === "task" ? "task pool" : target.type });
+      button.addEventListener("click", () => this.resolve(target));
+    }
+  }
+}
+
+function chooseTarget(app, options) {
+  return new Promise((resolve) => {
+    new TargetSelectorModal(app, options, resolve).open();
+  });
+}
+
+function rememberTarget(state, target) {
+  const recent = [target, ...(state.recentTargets || [])]
+    .filter(Boolean)
+    .filter((item, index, list) => list.findIndex((other) => other.type === item.type && other.id === item.id) === index)
+    .slice(0, 8);
+  return recent;
+}
+
 export const pomodoroWidget = {
   type: "pomodoro",
   displayName: "Pomodoro",
   shell: "strip",
   allowedSizes: ALL_SIZE_PRESETS,
   defaultSize: { preset: "W1H2", w: 1, h: 2 },
-  defaultConfig: { title: "pomodoro", workMinutes: 25, breakMinutes: 5 },
+  defaultConfig: {
+    title: "pomodoro",
+    workMinutes: 25,
+    breakMinutes: 5,
+    projectFolders: [],
+    projectTags: ["type/project"],
+    projectNamePrefixes: ["Project_"],
+    areaFolders: ["20_Areas"],
+    areaTags: [],
+    areaNamePrefixes: ["Area_"],
+    taskFile: "10_Projects/进行中/QuickCapture.md"
+  },
   defaultState: {
     status: "idle",
     remainingSeconds: 1500,
     phaseStartedAt: 0,
     todayCountDate: "",
-    todayCount: 0
+    todayCount: 0,
+    recentTargets: []
   },
   async render(container, api) {
     const timer = container.createDiv({ cls: "yh-pomo" });
@@ -82,6 +180,7 @@ export const pomodoroWidget = {
     const progress = timer.createDiv({ cls: "yh-pomo-progress" });
     const progressFill = progress.createDiv({ cls: "yh-pomo-progress-fill" });
     const meta = timer.createDiv({ cls: "yh-pomo-meta" });
+    const targetLabel = timer.createDiv({ cls: "yh-pomo-target" });
     const controls = timer.createDiv({ cls: "yh-pomo-controls" });
     const startBtn = controls.createEl("button", {
       cls: "yh-pomo-btn yh-pomo-btn-primary"
@@ -89,23 +188,33 @@ export const pomodoroWidget = {
     const resetBtn = controls.createEl("button", {
       cls: "yh-pomo-btn"
     });
+    const addTimeBtn = controls.createEl("button", {
+      cls: "yh-pomo-btn"
+    });
+    const logBtn = controls.createEl("button", {
+      cls: "yh-pomo-btn"
+    });
     const settingsBtn = controls.createEl("button", {
       cls: "yh-pomo-btn"
     });
     setIcon(startBtn, "play");
     setIcon(resetBtn, "rotate-ccw");
+    setIcon(addTimeBtn, "plus");
+    setIcon(logBtn, "history");
     setIcon(settingsBtn, "settings");
     const count = timer.createDiv({ cls: "yh-pomo-count" });
     const updateVisual = async () => {
       const stored = { state: api.getState(), config: api.getConfig() };
       const computed = reconcilePomodoroState(stored.state, stored.config);
+      const workSeconds = (Number(stored.config.workMinutes) || 25) * 60;
       const total = (computed.status === "break"
         ? (Number(stored.config.breakMinutes) || 5) * 60
-        : (Number(stored.config.workMinutes) || 25) * 60) || 1;
+        : workSeconds) || 1;
       const pct = Math.max(0, Math.min(100, ((total - computed.remainingSeconds) / total) * 100));
       timerText.setText(formatSeconds(computed.remainingSeconds));
       progressFill.style.setProperty("--yh-pomo-fill", `${pct}%`);
       progressFill.toggleClass("is-break", computed.status === "break");
+      const activeTarget = computed.activeTarget || stored.state.activeTarget;
       meta.setText(
         computed.status === "idle"
           ? "READY TO FOCUS"
@@ -115,17 +224,36 @@ export const pomodoroWidget = {
               ? "PAUSED"
               : "BREAK TIME"
       );
-      count.setText(`today: ${computed.todayCount} pomodoros`);
+      targetLabel.setText(activeTarget ? activeTarget.title : "No target selected");
+      const summary = api.getTimeSummary("today");
+      count.setText(`today: ${summary.totalDuration} min focus`);
       const isActive = computed.status === "running" || computed.status === "break";
       setIcon(startBtn, isActive ? "pause" : "play");
       const changed = JSON.stringify(computed) !== JSON.stringify(stored.state);
       if (changed) {
+        if (stored.state.status === "running" && computed.status === "break" && activeTarget) {
+          const ui = api.getUiState();
+          if (!ui.loggingPomodoro) {
+            ui.loggingPomodoro = true;
+            const endTime = Date.now();
+            await api.createTimeLog({
+              source: "pomodoro",
+              startTime: endTime - workSeconds * 1000,
+              endTime,
+              target: activeTarget,
+              activityType: "work"
+            });
+            ui.loggingPomodoro = false;
+          }
+        }
         await api.saveState({
           status: computed.status,
           remainingSeconds: computed.remainingSeconds,
           phaseStartedAt: computed.phaseStartedAt,
           todayCountDate: computed.todayCountDate,
-          todayCount: computed.todayCount
+          todayCount: computed.todayCount,
+          activeTarget,
+          recentTargets: computed.recentTargets || stored.state.recentTargets || []
         }, computed.status === "idle" && stored.state.status !== "idle");
       }
     };
@@ -142,15 +270,29 @@ export const pomodoroWidget = {
           remainingSeconds: computed.remainingSeconds,
           phaseStartedAt: 0,
           todayCountDate: computed.todayCountDate,
-          todayCount: computed.todayCount
+          todayCount: computed.todayCount,
+          activeTarget: computed.activeTarget,
+          recentTargets: computed.recentTargets || []
         }, true);
       } else {
+        let activeTarget = computed.activeTarget;
+        if (!activeTarget && computed.status !== "break") {
+          activeTarget = await chooseTarget(api.app, {
+            recentTargets: computed.recentTargets || [],
+            projectTargets: listProjectTargets(api.app, api.getConfig()),
+            areaTargets: listAreaTargets(api.app, api.getConfig()),
+            taskTarget: quickCaptureTaskTarget(api.app, api.getConfig().taskFile)
+          });
+          if (!activeTarget) return;
+        }
         await api.saveState({
           status: computed.status === "break" ? "break" : "running",
           remainingSeconds: computed.remainingSeconds,
           phaseStartedAt: Date.now(),
           todayCountDate: computed.todayCountDate,
-          todayCount: computed.todayCount
+          todayCount: computed.todayCount,
+          activeTarget,
+          recentTargets: activeTarget ? rememberTarget(computed, activeTarget) : computed.recentTargets || []
         }, true);
       }
     });
@@ -158,8 +300,15 @@ export const pomodoroWidget = {
       await api.saveState({
         status: "idle",
         remainingSeconds: (Number(api.widgetData.config.workMinutes) || 25) * 60,
-        phaseStartedAt: 0
+        phaseStartedAt: 0,
+        activeTarget: null
       }, true);
+    });
+    addTimeBtn.addEventListener("click", () => {
+      api.openManualTimeRecord();
+    });
+    logBtn.addEventListener("click", () => {
+      api.openTimeLogList();
     });
     settingsBtn.addEventListener("click", () => {
       new PomodoroSettingsModal(api.app, api.getConfig(), async (draft) => {
@@ -195,5 +344,51 @@ export const pomodoroWidget = {
         draft.breakMinutes = Number(value) || 5;
       });
     });
+    new Setting(container).setName("Project folders").setDesc("One vault-relative folder per line. Empty means any folder.").addTextArea((text) => {
+      text.setValue(serializeLines(draft.projectFolders));
+      text.onChange((value) => {
+        draft.projectFolders = parseLineList(value);
+      });
+    });
+    new Setting(container).setName("Project tags").setDesc("All listed tags must be present. One tag per line, with or without #.").addTextArea((text) => {
+      text.setValue(serializeLines(draft.projectTags));
+      text.onChange((value) => {
+        draft.projectTags = parseLineList(value);
+      });
+    });
+    new Setting(container).setName("Project filename prefixes").setDesc("One prefix per line. Empty disables the filename condition.").addTextArea((text) => {
+      text.setValue(serializeLines(draft.projectNamePrefixes));
+      text.onChange((value) => {
+        draft.projectNamePrefixes = parseLineList(value);
+      });
+    });
+    new Setting(container).setName("Area folders").setDesc("One vault-relative folder per line. Empty means any folder.").addTextArea((text) => {
+      text.setValue(serializeLines(draft.areaFolders));
+      text.onChange((value) => {
+        draft.areaFolders = parseLineList(value);
+      });
+    });
+    new Setting(container).setName("Area tags").setDesc("All listed tags must be present. One tag per line, with or without #.").addTextArea((text) => {
+      text.setValue(serializeLines(draft.areaTags));
+      text.onChange((value) => {
+        draft.areaTags = parseLineList(value);
+      });
+    });
+    new Setting(container).setName("Area filename prefixes").setDesc("One prefix per line. Empty disables the filename condition.").addTextArea((text) => {
+      text.setValue(serializeLines(draft.areaNamePrefixes));
+      text.onChange((value) => {
+        draft.areaNamePrefixes = parseLineList(value);
+      });
+    });
+    new Setting(container).setName("Task file").setDesc("Vault-relative file used as the task time pool.").addText((text) => {
+      text.setValue(draft.taskFile || "10_Projects/进行中/QuickCapture.md");
+      text.onChange((value) => {
+        draft.taskFile = value.trim() || "10_Projects/进行中/QuickCapture.md";
+      });
+    });
   }
 };
+
+function serializeLines(value) {
+  return Array.isArray(value) ? value.join("\n") : String(value || "");
+}

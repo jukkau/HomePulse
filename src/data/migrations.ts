@@ -3,7 +3,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 type MigrationData = Record<string, any>;
 
@@ -27,6 +27,11 @@ export function migrateToLatest(raw: any): MigrationData {
   if (version < 1) {
     data = migrateV0ToV1(data);
     version = 1;
+  }
+
+  if (version < 2) {
+    data = migrateV1ToV2(data);
+    version = 2;
   }
 
   data.schemaVersion = CURRENT_SCHEMA_VERSION;
@@ -76,6 +81,19 @@ function migrateV0ToV1(raw: MigrationData): MigrationData {
   }
 
   return next;
+}
+
+/**
+ * v1 → v2
+ * - Add the Time Flow fact table.
+ * - Preserve any experimental timeLogs array if it already exists.
+ */
+function migrateV1ToV2(raw: MigrationData): MigrationData {
+  return {
+    ...raw,
+    schemaVersion: 2,
+    timeLogs: Array.isArray(raw.timeLogs) ? raw.timeLogs.slice() : []
+  };
 }
 
 function isPlainObject(value: any): boolean {

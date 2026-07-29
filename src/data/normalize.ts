@@ -5,9 +5,10 @@ import { migrateToLatest, CURRENT_SCHEMA_VERSION } from "./migrations";
 import {
   validateLayoutWidget,
   validateSettings,
+  validateTimeLogs,
   validateWidgetStoredData
 } from "./validators";
-import type { DefinitionResolver, PluginData, WidgetLayoutItem } from "../types";
+import type { DefinitionResolver, HomepageLayoutPreset, PluginData, WidgetLayoutItem } from "../types";
 
 type NormalizeDeps = {
   mergeDefaults: (base: any, saved: any) => any;
@@ -41,6 +42,10 @@ function validateAndFillDefaults(migrated: any, deps: NormalizeDeps): PluginData
   } else {
     delete data.defaultLayout;
   }
+  data.layoutPresets = normalizeLayoutPresets(data, deps);
+  if (!data.layoutPresets.some((preset: HomepageLayoutPreset) => preset.id === data.defaultLayoutPresetId)) {
+    data.defaultLayoutPresetId = data.layoutPresets[0]?.id || "public-default";
+  }
 
   const widgetMap = data.widgets && typeof data.widgets === "object" ? data.widgets : {};
   const nextMap: Record<string, any> = {};
@@ -62,11 +67,13 @@ function validateAndFillDefaults(migrated: any, deps: NormalizeDeps): PluginData
   }
 
   data.widgets = nextMap;
+  data.timeLogs = validateTimeLogs(data.timeLogs);
   return data;
 }
 
 function normalizeLayout(rawLayout: any, fallbackLayout: any, deps: NormalizeDeps): any {
   const layout = rawLayout && typeof rawLayout === "object" ? rawLayout : fallbackLayout;
+  const columns = clampLayoutColumns(layout.columns, fallbackLayout.columns || 5);
   const rawWidgets = deps.normalizeArray(layout.widgets, fallbackLayout.widgets);
   const widgets = rawWidgets
     .map((widget) => {
@@ -79,12 +86,56 @@ function normalizeLayout(rawLayout: any, fallbackLayout: any, deps: NormalizeDep
         y: cleaned.y,
         sizePreset: cleaned.sizePreset
       };
-      return deps.applySizePreset(next, next.sizePreset, 5);
+      return deps.applySizePreset(next, next.sizePreset, columns);
     })
     .filter((w): w is WidgetLayoutItem => Boolean(w));
 
   return {
-    columns: 5,
-    widgets: deps.packLayout(widgets, 5)
+    columns,
+    widgets: deps.packLayout(widgets, columns)
   };
+}
+
+function clampLayoutColumns(value: any, fallback = 5): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(1, Math.min(5, Math.round(n)));
+}
+
+function normalizeLayoutPresets(data: any, deps: NormalizeDeps): HomepageLayoutPreset[] {
+  const builtIn = (DEFAULT_DATA.layoutPresets || []).map((preset: any) => ({
+    id: preset.id,
+    name: preset.name,
+    isBuiltIn: true,
+    updatedAt: Number(preset.updatedAt) || 0,
+    layout: normalizeLayout(preset.layout, DEFAULT_DATA.layout, deps)
+  }));
+  const seen = new Set<string>(builtIn.map((preset) => preset.id));
+  const presets: HomepageLayoutPreset[] = [...builtIn];
+  const rawPresets = Array.isArray(data.layoutPresets) ? data.layoutPresets : [];
+
+  for (const raw of rawPresets) {
+    if (!raw || typeof raw !== "object") continue;
+    const id = String(raw.id || "").trim() || deps.randomId("layout");
+    if (!id || seen.has(id)) continue;
+    const name = String(raw.name || "").trim() || "Untitled layout";
+    presets.push({
+      id,
+      name,
+      updatedAt: Number(raw.updatedAt) || Date.now(),
+      layout: normalizeLayout(raw.layout, DEFAULT_DATA.layout, deps)
+    });
+    seen.add(id);
+  }
+
+  if (data.defaultLayout && !seen.has("saved-default")) {
+    presets.push({
+      id: "saved-default",
+      name: "Saved default",
+      updatedAt: Date.now(),
+      layout: normalizeLayout(data.defaultLayout, DEFAULT_DATA.layout, deps)
+    });
+  }
+
+  return presets;
 }

@@ -16,7 +16,7 @@ function renderBookmarkIcon(button, item, useFavicons) {
     const image = icon.createEl("img", {
       cls: "yh-action-favicon",
       attr: {
-        src: `${url.origin}/favicon.ico`,
+        src: `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(url.href)}&sz=64`,
         alt: "",
         loading: "lazy",
         referrerpolicy: "no-referrer"

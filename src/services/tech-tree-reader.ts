@@ -1,4 +1,5 @@
-import { DEFAULT_TECH_TREE_SOURCE } from "../constants";
+﻿import { DEFAULT_PROJECT_NAME_PREFIXES, DEFAULT_TECH_TREE_SOURCE } from "../constants";
+import { matchesProjectFilter, readProjectFilterConfig } from "./project-filter";
 
 const {
   TFile,
@@ -7,8 +8,6 @@ const {
 
 const DEFAULT_AREA_ROOT = "20_Areas";
 const DEFAULT_ACTIVE_PROJECT_ROOT = "10_Projects/进行中";
-
-
 
 function withinFolder(path: string, folder: string): boolean {
   const normalizedPath = normalizePath(path);
@@ -37,14 +36,6 @@ function getValueGroup(frontmatter: any): any | null {
     }
   }
   return null;
-}
-
-function hasProjectTags(frontmatter: any): boolean {
-  const tags = new Set(
-    asArray(frontmatter.tags)
-      .map((rawTag) => String(rawTag || "").trim().replace(/^#/, "").toLowerCase())
-  );
-  return tags.has("type/project") && tags.has("status/ing");
 }
 
 function extractLinkpath(value: any): string {
@@ -78,7 +69,12 @@ function findAreaFile(app: any, sourceFile: any, linkpath: string, areaByKey: Ma
 export async function readTechTreeData(app: any, sourcePath: string, options: any = {}) {
   const path = normalizePath(sourcePath || DEFAULT_TECH_TREE_SOURCE);
   const areaRoot = normalizePath(options.areaRoot || DEFAULT_AREA_ROOT);
-  const activeProjectRoot = normalizePath(options.activeProjectRoot || DEFAULT_ACTIVE_PROJECT_ROOT);
+  const legacyActiveProjectRoot = normalizePath(options.activeProjectRoot || DEFAULT_ACTIVE_PROJECT_ROOT);
+  const projectFilter = readProjectFilterConfig({
+    projectFolders: options.projectFolders ?? [legacyActiveProjectRoot],
+    projectTags: options.projectTags ?? [],
+    projectNamePrefixes: options.projectNamePrefixes ?? DEFAULT_PROJECT_NAME_PREFIXES
+  });
   const file = app.vault.getAbstractFileByPath(path);
   if (!(file instanceof TFile)) {
     return { error: `Tech tree source is missing: ${path}` };
@@ -129,15 +125,7 @@ export async function readTechTreeData(app: any, sourcePath: string, options: an
     areaNodeByPath.set(normalizePath(areaFile.path).toLowerCase(), node);
   }
 
-  const activeProjectFiles = markdownFiles.filter((candidate: any) => {
-    const parentPath = candidate.parent && normalizePath(candidate.parent.path);
-    if (!/^Project_/i.test(String(candidate.basename || ""))) return false;
-
-    // Keep the legacy active-project folder, and also allow active project
-    // roots that stay in their own project directory.
-    return parentPath === activeProjectRoot
-      || hasProjectTags(getFrontmatter(app, candidate));
-  });
+  const activeProjectFiles = markdownFiles.filter((candidate: any) => matchesProjectFilter(app, candidate, projectFilter));
 
   for (const projectFile of activeProjectFiles) {
     const frontmatter = getFrontmatter(app, projectFile);

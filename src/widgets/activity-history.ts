@@ -1,7 +1,12 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
 
 import { Setting, MarkdownRenderer } from "obsidian";
+
+function getConfiguredYear(config) {
+  const year = String(config.year || "").trim();
+  return /^\d{4}$/.test(year) ? year : String(new Date().getFullYear());
+}
 
 export const activityHistoryWidget = {
   type: "activity-history",
@@ -9,12 +14,11 @@ export const activityHistoryWidget = {
   shell: "canvas",
   allowedSizes: ALL_SIZE_PRESETS,
   defaultSize: { preset: "W4H2", w: 4, h: 2 },
-  defaultConfig: { title: "activity history", sourcePath: "/" },
+  defaultConfig: { title: "activity history", sourcePath: "/", year: "" },
   defaultState: {},
   async render(container, api) {
     const sourcePath = api.widgetData.config.sourcePath || "/";
-    const yearRow = container.createDiv({ cls: "yh-activity-year-row" });
-    const yearSlot = yearRow.createDiv({ cls: "yh-activity-year-slot" });
+    const selectedYear = getConfiguredYear(api.widgetData.config);
     const host = container.createDiv({ cls: "yh-activity-wrap" });
     const footer = container.createDiv({ cls: "yh-activity-footer" });
     const status = footer.createDiv({ cls: "yh-activity-status", text: "Reading activity rhythm..." });
@@ -30,9 +34,13 @@ export const activityHistoryWidget = {
       "",
       api.component
     );
-    const moveYearSelector = () => {
-      const yearSelector = host.querySelector("#SelectYear");
-      if (yearSelector) yearSlot.appendChild(yearSelector);
+    const applyConfiguredYear = () => {
+      const select = host.querySelector("#SelectYear select, .selectYear select, select.selectYear, select");
+      if (!select) return;
+      if (Array.from(select.options || []).some((option) => option.value === selectedYear || option.text === selectedYear)) {
+        select.value = selectedYear;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
     };
     const refreshStatus = () => {
       const cells = Array.from(host.querySelectorAll("svg rect"));
@@ -42,15 +50,20 @@ export const activityHistoryWidget = {
       });
       status.setText(
         activeCells.length
-          ? `${activeCells.length} active days this year · steady notes rhythm`
-          : "No activity recorded yet this year"
+          ? `${selectedYear} · ${activeCells.length} active days · steady notes rhythm`
+          : `${selectedYear} · no activity recorded`
       );
     };
-    moveYearSelector();
+    applyConfiguredYear();
     refreshStatus();
-    window.requestAnimationFrame(moveYearSelector);
-    window.requestAnimationFrame(refreshStatus);
-    window.setTimeout(refreshStatus, 250);
+    window.requestAnimationFrame(() => {
+      applyConfiguredYear();
+      refreshStatus();
+    });
+    window.setTimeout(() => {
+      applyConfiguredYear();
+      refreshStatus();
+    }, 250);
   },
   renderSettings(container, draft) {
     new Setting(container).setName("Title").addText((text) => {
@@ -63,6 +76,13 @@ export const activityHistoryWidget = {
       text.setValue(draft.sourcePath || "/");
       text.onChange((value) => {
         draft.sourcePath = value.trim() || "/";
+      });
+    });
+    new Setting(container).setName("Year").setDesc("Four digits. Empty uses the current year.").addText((text) => {
+      text.setPlaceholder(String(new Date().getFullYear()));
+      text.setValue(draft.year || "");
+      text.onChange((value) => {
+        draft.year = /^\d{4}$/.test(value.trim()) ? value.trim() : "";
       });
     });
   }

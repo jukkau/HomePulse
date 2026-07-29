@@ -1,61 +1,19 @@
-// @ts-nocheck
+﻿// @ts-nocheck
+import { DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { parseLineList } from "./widget-api";
+import {
+  getProjectFileTags,
+  matchesProjectFilter,
+  readProjectFilterConfig,
+  renderProjectFilterSettings
+} from "../services/project-filter";
 
-import { normalizePath, Setting, setIcon } from "obsidian";
-
-const DEFAULT_PROJECT_PREFIX = "Project_";
-
-function normalizeToken(value) {
-  return String(value || "").replace(/^#/, "").trim();
-}
-
-function normalizeFilterList(value) {
-  if (Array.isArray(value)) return value.map(normalizeToken).filter(Boolean);
-  return parseLineList(value).map(normalizeToken).filter(Boolean);
-}
-
-function withinAnyFolder(file, folders) {
-  if (!folders.length) return true;
-  const path = normalizePath(file.path);
-  return folders.some((folder) => {
-    const root = normalizePath(folder).replace(/\/+$/, "");
-    return path === root || path.startsWith(`${root}/`);
-  });
-}
-
-function matchesAnyPrefix(file, prefixes) {
-  if (!prefixes.length) return true;
-  const basename = String(file.basename || "");
-  return prefixes.some((prefix) => basename.startsWith(prefix));
-}
-
-function fileTags(app, file) {
-  const cache = app.metadataCache.getFileCache(file) || {};
-  const tags = new Set();
-  for (const entry of cache.tags || []) {
-    const tag = normalizeToken(entry.tag);
-    if (tag) tags.add(tag);
-  }
-  const frontmatterTags = cache.frontmatter?.tags;
-  const list = Array.isArray(frontmatterTags) ? frontmatterTags : frontmatterTags ? [frontmatterTags] : [];
-  for (const rawTag of list) {
-    const tag = normalizeToken(rawTag);
-    if (tag) tags.add(tag);
-  }
-  return tags;
-}
-
-function matchesAnyTag(app, file, tags) {
-  if (!tags.length) return true;
-  const present = fileTags(app, file);
-  return tags.some((tag) => present.has(tag));
-}
+import { setIcon, Setting } from "obsidian";
 
 function countTags(app, files) {
   const tags = new Set();
   for (const file of files) {
-    for (const tag of fileTags(app, file)) {
+    for (const tag of getProjectFileTags(app, file)) {
       tags.add(tag);
     }
   }
@@ -63,14 +21,8 @@ function countTags(app, files) {
 }
 
 function countProjects(app, files, config) {
-  const prefixes = normalizeFilterList(config.projectNamePrefixes || config.projectNamePrefix || DEFAULT_PROJECT_PREFIX);
-  const folders = normalizeFilterList(config.projectFolders || []);
-  const tags = normalizeFilterList(config.projectTags || []);
-  return files.filter((file) =>
-    matchesAnyPrefix(file, prefixes)
-    && withinAnyFolder(file, folders)
-    && matchesAnyTag(app, file, tags)
-  ).length;
+  const filter = readProjectFilterConfig(config, { namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES });
+  return files.filter((file) => matchesProjectFilter(app, file, filter)).length;
 }
 
 export const knowledgeProfileWidget = {
@@ -81,7 +33,7 @@ export const knowledgeProfileWidget = {
   defaultSize: { preset: "W4H2", w: 4, h: 2 },
   defaultConfig: {
     title: "knowledge profile",
-    projectNamePrefixes: [DEFAULT_PROJECT_PREFIX],
+    projectNamePrefixes: DEFAULT_PROJECT_NAME_PREFIXES,
     projectFolders: [],
     projectTags: []
   },
@@ -117,23 +69,6 @@ export const knowledgeProfileWidget = {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Project filename prefixes").setDesc("One per line. Empty disables the prefix condition.").addTextArea((text) => {
-      text.setValue(normalizeFilterList(draft.projectNamePrefixes || draft.projectNamePrefix || DEFAULT_PROJECT_PREFIX).join("\n"));
-      text.onChange((value) => {
-        draft.projectNamePrefixes = parseLineList(value);
-      });
-    });
-    new Setting(container).setName("Project folders").setDesc("One vault-relative folder per line. Empty means any folder.").addTextArea((text) => {
-      text.setValue(normalizeFilterList(draft.projectFolders || []).join("\n"));
-      text.onChange((value) => {
-        draft.projectFolders = parseLineList(value);
-      });
-    });
-    new Setting(container).setName("Project tags").setDesc("One tag per line, with or without #. Empty means any tag.").addTextArea((text) => {
-      text.setValue(normalizeFilterList(draft.projectTags || []).join("\n"));
-      text.onChange((value) => {
-        draft.projectTags = parseLineList(value);
-      });
-    });
+    renderProjectFilterSettings(container, draft, { namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES });
   }
 };

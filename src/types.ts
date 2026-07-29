@@ -17,7 +17,9 @@ export type WidgetLayoutItem = {
 export type HomepageSettings = {
   openOnStartup: boolean;
   lockHomepage: boolean;
+  language: "zh-CN" | "en";
   themePreset: string;
+  accentColor: string;
   profileName: string;
   profileSignature: string;
   obsidianStartDate: string;
@@ -31,12 +33,49 @@ export type HomepageLayout = {
   widgets: WidgetLayoutItem[];
 };
 
+export type HomepageLayoutPreset = {
+  id: string;
+  name: string;
+  layout: HomepageLayout;
+  isBuiltIn?: boolean;
+  updatedAt?: number;
+};
+
 export type WidgetStoredData<
   Config extends Record<string, unknown> = Record<string, unknown>,
   State extends Record<string, unknown> = Record<string, unknown>
 > = {
   config: Config;
   state: State;
+};
+
+export type TimeLogSource = "pomodoro" | "manual";
+export type TimeLogTargetType = "project" | "area" | "task" | "quick";
+export type TimeLogActivityType =
+  | "work"
+  | "learning"
+  | "creative"
+  | "exercise"
+  | "reading"
+  | "travel"
+  | "other";
+
+export type TimeLog = {
+  id: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  source: TimeLogSource;
+  targetType: TimeLogTargetType;
+  targetId: string;
+  projectId?: string;
+  projectTitle?: string;
+  areaId?: string;
+  areaTitle?: string;
+  taskId?: string;
+  activityType?: TimeLogActivityType;
+  note?: string;
+  createdAt: number;
 };
 
 export type PluginData = {
@@ -46,7 +85,10 @@ export type PluginData = {
   settings: HomepageSettings;
   layout: HomepageLayout;
   defaultLayout?: HomepageLayout;
+  layoutPresets?: HomepageLayoutPreset[];
+  defaultLayoutPresetId?: string;
   widgets: Record<string, WidgetStoredData>;
+  timeLogs: TimeLog[];
 };
 
 export type WidgetDefinition = {

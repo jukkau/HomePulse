@@ -123,7 +123,7 @@ export class SetupWizardModal extends Modal {
       for (const widget of data.layout.widgets) {
         if (widget.type === "projects" || widget.type === "tasks") {
           const slot = data.widgets[widget.id];
-          if (slot) slot.config.folders = [projectsPath];
+          if (slot) slot.config.projectFolders = [projectsPath];
         }
       }
     }

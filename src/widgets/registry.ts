@@ -15,6 +15,7 @@ import { recentNotesWidget } from "./recent-notes";
 import { statsOverviewWidget } from "./stats-overview";
 import { tasksWidget } from "./tasks";
 import { techTreeWidget } from "./tech-tree";
+import { timeFlowWidget } from "./time-flow";
 
 export function createWidgetRegistry(plugin) {
   void plugin;
@@ -32,6 +33,7 @@ export function createWidgetRegistry(plugin) {
     knowledgeProfileWidget,
     recentNotesWidget,
     techTreeWidget,
+    timeFlowWidget,
     activityHistoryWidget
   ];
 }

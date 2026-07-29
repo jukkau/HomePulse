@@ -1,7 +1,8 @@
-// @ts-nocheck
-import { DEFAULT_TASK_FOLDERS } from "../constants";
+﻿// @ts-nocheck
+import { DEFAULT_PROJECT_NAME_PREFIXES, DEFAULT_TASK_FOLDERS } from "../constants";
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { normalizeArray, parseLineList, renderEmpty } from "./widget-api";
+import { readProjectFilterConfig, renderProjectFilterSettings } from "../services/project-filter";
+import { renderEmpty } from "./widget-api";
 
 const { Setting } = require("obsidian");
 
@@ -11,13 +12,22 @@ export const tasksWidget = {
   shell: "panel",
   allowedSizes: ALL_SIZE_PRESETS,
   defaultSize: { preset: "W1H3", w: 1, h: 3 },
-  defaultConfig: { title: "open tasks", folders: DEFAULT_TASK_FOLDERS, limit: 12 },
+  defaultConfig: {
+    title: "open tasks",
+    projectFolders: DEFAULT_TASK_FOLDERS,
+    projectTags: [],
+    projectNamePrefixes: DEFAULT_PROJECT_NAME_PREFIXES,
+    limit: 12
+  },
   defaultState: {},
   async render(container, api) {
-    const folders = normalizeArray(api.widgetData.config.folders, DEFAULT_TASK_FOLDERS);
-    const tasks = api.snapshot.getOpenTasks(folders, Number(api.widgetData.config.limit) || 12);
+    const filter = readProjectFilterConfig(api.widgetData.config, {
+      folders: DEFAULT_TASK_FOLDERS,
+      namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
+    });
+    const tasks = api.snapshot.getOpenTasks(filter, Number(api.widgetData.config.limit) || 12);
     if (!tasks.length) {
-      renderEmpty(container, "No open tasks found.");
+      renderEmpty(container, "No open tasks found for this filter.");
       return;
     }
     const list = container.createDiv({ cls: "yh-task-list" });
@@ -42,11 +52,9 @@ export const tasksWidget = {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Folders").setDesc("One folder per line.").addTextArea((text) => {
-      text.setValue(normalizeArray(draft.folders, DEFAULT_TASK_FOLDERS).join("\n"));
-      text.onChange((value) => {
-        draft.folders = parseLineList(value);
-      });
+    renderProjectFilterSettings(container, draft, {
+      folders: DEFAULT_TASK_FOLDERS,
+      namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
     });
     new Setting(container).setName("Limit").addText((text) => {
       text.setValue(String(draft.limit || 12));

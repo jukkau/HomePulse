@@ -5,7 +5,7 @@ const { Setting } = require("obsidian");
 
 export const focusWidget = {
   type: "focus",
-  displayName: "Focus",
+  displayName: "Today's goal",
   shell: "text",
   allowedSizes: ALL_SIZE_PRESETS,
   defaultSize: { preset: "W1H1", w: 1, h: 1 },

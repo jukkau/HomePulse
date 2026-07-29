@@ -14,7 +14,12 @@ import { getGridRows, packLayout, sortLayoutForReadingOrder } from "./layout/pac
 import { buildResponsiveLayout, getResponsiveColumnCount } from "./layout/responsive-layout";
 import { getResponsiveSpanClasses } from "./layout/responsive-classes";
 import { applySizePreset, toSizePreset } from "./layout/size-presets";
+import { normalizeLanguage, t } from "./i18n";
 import { SnapshotBuilder } from "./services/snapshot-builder";
+import { ManualTimeRecordModal } from "./services/time/ManualTimeRecordModal";
+import { TimeLogListModal } from "./services/time/TimeLogListModal";
+import { TimeAggregation } from "./services/time/TimeAggregation";
+import { TimeLogService } from "./services/time/TimeLogService";
 import { calculateObsidianUsageDays, formatDateKey } from "./services/obsidian-usage";
 import { createWidgetRegistry } from "./widgets/registry";
 import { SetupWizardModal } from "./data/setup-wizard";
@@ -38,8 +43,8 @@ function stripHoverHints(root) {
   root.querySelectorAll("title").forEach((element) => element.remove());
 }
 
-function formatLongDate(date) {
-  return date.toLocaleDateString("zh-CN", {
+function formatLongDate(date, language = "zh-CN") {
+  return date.toLocaleDateString(normalizeLanguage(language), {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -59,50 +64,209 @@ function cycleValue(values, current) {
   return values[(index + 1) % values.length];
 }
 
-class ResetLayoutConfirmModal extends Modal {
-  constructor(app, onResolve) {
-    super(app);
-    this.onResolve = onResolve;
-    this.resolved = false;
-  }
+function getResponsiveBasisWidth(frame) {
+  return Math.max(window.innerWidth || 0, frame?.clientWidth || 0);
+}
 
-  resolve(value) {
-    if (this.resolved) return;
-    this.resolved = true;
-    this.onResolve(value);
-    this.close();
+function clampLayoutColumns(value, fallback = 5) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return clamp(Math.round(n), 1, 5);
+}
+
+function normalizeHexColor(value, fallback = "#f5c2e7") {
+  const text = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(text) ? text : fallback;
+}
+
+function hexToRgb(value) {
+  const hex = normalizeHexColor(value).slice(1);
+  return {
+    r: parseInt(hex.slice(0, 2), 16),
+    g: parseInt(hex.slice(2, 4), 16),
+    b: parseInt(hex.slice(4, 6), 16)
+  };
+}
+
+function rgbaFromHex(value, alpha) {
+  const { r, g, b } = hexToRgb(value);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+class ManageLayoutPresetsModal extends Modal {
+  constructor(app, plugin) {
+    super(app);
+    this.plugin = plugin;
+    this.name = "";
+    this.columns = clampLayoutColumns(plugin.data.layout.columns, 5);
   }
 
   onOpen() {
+    this.render();
+  }
+
+  render() {
     const { contentEl } = this;
     this.modalEl.addClass("yh-settings-shell");
     contentEl.empty();
     contentEl.addClass("yh-modal", "yh-settings-modal");
-    contentEl.createEl("h2", { text: "Reset layout?" });
-    contentEl.createDiv({
-      cls: "yh-settings-subtitle",
-      text: "This will restore the saved default widget positions, sizes, and widget set. Current layout changes will be replaced."
+    contentEl.createEl("h2", { text: "Manage layouts" });
+
+    const saveRow = contentEl.createDiv({ cls: "yh-layout-save-row" });
+    const input = saveRow.createEl("input", {
+      type: "text",
+      placeholder: "Name this layout..."
+    });
+    input.value = this.name;
+    input.addEventListener("input", () => {
+      this.name = input.value;
+    });
+    const columns = saveRow.createEl("select");
+    for (let value = 1; value <= 5; value += 1) {
+      columns.createEl("option", { value: String(value), text: `${value} cols` });
+    }
+    columns.value = String(this.columns);
+    columns.addEventListener("change", () => {
+      this.columns = clampLayoutColumns(columns.value, 5);
+    });
+    const save = saveRow.createEl("button", { cls: "mod-cta", text: "Save" });
+    save.addEventListener("click", async () => {
+      const saved = await this.plugin.saveCurrentLayoutPreset(this.name, this.columns);
+      this.name = "";
+      new Notice(`HomePulse layout saved: ${saved.name}.`);
+      this.render();
     });
 
-    const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
-    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
-    const confirm = footer.createEl("button", { cls: "mod-warning yh-modal-save", text: "Reset layout" });
-    cancel.addEventListener("click", () => this.resolve(false));
-    confirm.addEventListener("click", () => this.resolve(true));
+    const list = contentEl.createDiv({ cls: "yh-layout-list" });
+    for (const preset of this.plugin.getLayoutPresets()) {
+      const row = list.createDiv({ cls: "yh-layout-row" });
+      const info = row.createDiv({ cls: "yh-layout-info" });
+      const title = info.createDiv({ cls: "yh-layout-title" });
+      title.createSpan({ text: preset.name });
+      if (preset.id === this.plugin.data.defaultLayoutPresetId) {
+        title.createSpan({ cls: "yh-layout-current", text: "Current" });
+      }
+      info.createDiv({
+        cls: "yh-layout-meta",
+        text: `${preset.layout.columns || 5} columns${preset.updatedAt ? ` · modified ${this.formatRelativeTime(preset.updatedAt)}` : ""}`
+      });
+
+      const actions = row.createDiv({ cls: "yh-layout-actions" });
+      const load = actions.createEl("button", { text: "Load" });
+      load.addEventListener("click", async () => {
+        await this.plugin.loadLayoutPreset(preset.id);
+        new Notice(`HomePulse layout loaded: ${preset.name}.`);
+        this.render();
+      });
+      if (!preset.isBuiltIn) {
+        const remove = actions.createEl("button", { cls: "yh-icon-btn danger", text: "×" });
+        remove.addEventListener("click", async () => {
+          await this.plugin.deleteLayoutPreset(preset.id);
+          new Notice(`HomePulse layout deleted: ${preset.name}.`);
+          this.render();
+        });
+      }
+    }
   }
 
-  onClose() {
-    if (!this.resolved) {
-      this.resolved = true;
-      this.onResolve(false);
-    }
+  formatRelativeTime(timestamp) {
+    const age = Date.now() - Number(timestamp || 0);
+    if (!Number.isFinite(age) || age < 0) return "just now";
+    const minutes = Math.floor(age / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes} minutes ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hours ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 365) return `${days} days ago`;
+    return `${Math.floor(days / 365)} years ago`;
   }
 }
 
-async function confirmResetLayout(app) {
-  return new Promise((resolve) => {
-    new ResetLayoutConfirmModal(app, resolve).open();
-  });
+class LayoutManagerModal extends Modal {
+  constructor(app, plugin) {
+    super(app);
+    this.plugin = plugin;
+    this.name = "";
+    this.columns = clampLayoutColumns(plugin.data.layout.columns, 5);
+  }
+
+  onOpen() {
+    this.render();
+  }
+
+  render() {
+    const { contentEl } = this;
+    contentEl.empty();
+    this.modalEl.addClass("yh-settings-shell");
+    contentEl.addClass("yh-modal", "yh-settings-modal");
+    contentEl.createEl("h2", { text: this.plugin.t("manageLayouts") });
+
+    const saveRow = contentEl.createDiv({ cls: "yh-layout-save-row" });
+    const input = saveRow.createEl("input", { type: "text", placeholder: this.plugin.t("nameThisLayout") });
+    input.value = this.name;
+    input.addEventListener("input", () => {
+      this.name = input.value;
+    });
+    const columns = saveRow.createEl("select");
+    for (let value = 1; value <= 5; value += 1) {
+      columns.createEl("option", { value: String(value), text: this.plugin.t("columnsShort", { count: value }) });
+    }
+    columns.value = String(this.columns);
+    columns.addEventListener("change", () => {
+      this.columns = clampLayoutColumns(columns.value, 5);
+    });
+    const save = saveRow.createEl("button", { cls: "mod-cta", text: this.plugin.t("save") });
+    save.addEventListener("click", async () => {
+      const saved = await this.plugin.saveCurrentLayoutPreset(this.name, this.columns);
+      this.name = "";
+      new Notice(this.plugin.t("layoutSaved", { name: saved.name }));
+      this.render();
+    });
+
+    const list = contentEl.createDiv({ cls: "yh-layout-list" });
+    for (const preset of this.plugin.getLayoutPresets()) {
+      const row = list.createDiv({ cls: "yh-layout-row" });
+      const info = row.createDiv({ cls: "yh-layout-info" });
+      const title = info.createDiv({ cls: "yh-layout-title" });
+      title.createSpan({ text: preset.name });
+      if (preset.id === this.plugin.data.defaultLayoutPresetId) {
+        title.createSpan({ cls: "yh-layout-current", text: this.plugin.t("current") });
+      }
+      const meta = [this.plugin.t("columns", { count: preset.layout.columns || 5 })];
+      if (preset.updatedAt) meta.push(this.plugin.t("modified", { time: this.formatRelativeTime(preset.updatedAt) }));
+      info.createDiv({ cls: "yh-layout-meta", text: meta.join(" · ") });
+
+      const actions = row.createDiv({ cls: "yh-layout-actions" });
+      const load = actions.createEl("button", { text: this.plugin.t("load") });
+      load.addEventListener("click", async () => {
+        await this.plugin.loadLayoutPreset(preset.id);
+        new Notice(this.plugin.t("layoutLoaded", { name: preset.name }));
+        this.render();
+      });
+      if (!preset.isBuiltIn) {
+        const remove = actions.createEl("button", { cls: "yh-icon-btn danger", text: "×" });
+        remove.addEventListener("click", async () => {
+          await this.plugin.deleteLayoutPreset(preset.id);
+          new Notice(this.plugin.t("layoutDeleted", { name: preset.name }));
+          this.render();
+        });
+      }
+    }
+  }
+
+  formatRelativeTime(timestamp) {
+    const age = Date.now() - Number(timestamp || 0);
+    if (!Number.isFinite(age) || age < 0) return this.plugin.t("justNow");
+    const minutes = Math.floor(age / 60000);
+    if (minutes < 1) return this.plugin.t("justNow");
+    if (minutes < 60) return this.plugin.t("minutesAgo", { count: minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return this.plugin.t("hoursAgo", { count: hours });
+    const days = Math.floor(hours / 24);
+    if (days < 365) return this.plugin.t("daysAgo", { count: days });
+    return this.plugin.t("yearsAgo", { count: Math.floor(days / 365) });
+  }
 }
 
 async function openExternalOrInternal(app, link) {
@@ -131,12 +295,12 @@ class AddWidgetModal extends Modal {
     this.modalEl.addClass("yh-add-widget-shell");
     contentEl.empty();
     contentEl.addClass("yh-modal");
-    contentEl.createEl("h2", { text: "Add widget" });
+    contentEl.createEl("h2", { text: this.plugin.t("addWidget") });
     const grid = contentEl.createDiv({ cls: "yh-modal-grid" });
     for (const definition of this.plugin.registry) {
       const button = grid.createEl("button", { cls: "yh-widget-picker" });
       button.createDiv({ cls: "yh-widget-picker-title", text: definition.displayName });
-      button.createDiv({ cls: "yh-widget-picker-meta", text: "Resizable · 1–5 columns · 1–5 rows" });
+      button.createDiv({ cls: "yh-widget-picker-meta", text: this.plugin.language === "en" ? "Resizable · 1-5 columns · 1-5 rows" : "可调整大小 · 1-5 列 · 1-5 行" });
       button.addEventListener("click", () => {
         this.onPick(definition.type);
         this.close();
@@ -204,6 +368,7 @@ class HeaderSettingsModal extends Modal {
     const draft = {
       profileName: this.plugin.data.settings.profileName || "Your name",
       profileSignature: this.plugin.data.settings.profileSignature || "",
+      accentColor: normalizeHexColor(this.plugin.data.settings.accentColor),
       obsidianStartDate: this.plugin.data.settings.obsidianStartDate || "",
       lockHomepage: Boolean(this.plugin.data.settings.lockHomepage)
     };
@@ -220,6 +385,34 @@ class HeaderSettingsModal extends Modal {
       text.setValue(draft.profileSignature);
       text.onChange((value) => {
         draft.profileSignature = value;
+      });
+    });
+
+    const accentSetting = new Setting(body)
+      .setName("Theme color")
+      .setDesc("Choose the homepage accent color, or enter a #RRGGBB value.");
+    let accentPicker = null;
+    let accentText = null;
+    const syncAccentControls = (value) => {
+      const next = normalizeHexColor(value, draft.accentColor);
+      draft.accentColor = next;
+      if (accentPicker && accentPicker.getValue() !== next) accentPicker.setValue(next);
+      if (accentText && accentText.getValue() !== next) accentText.setValue(next);
+    };
+    accentSetting.addText((text) => {
+      accentPicker = text;
+      text.inputEl.type = "color";
+      text.setValue(draft.accentColor);
+      text.onChange((value) => {
+        syncAccentControls(value);
+      });
+    });
+    accentSetting.addText((text) => {
+      accentText = text;
+      text.setPlaceholder("#f5c2e7");
+      text.setValue(draft.accentColor);
+      text.onChange((value) => {
+        syncAccentControls(value);
       });
     });
 
@@ -267,6 +460,7 @@ class HeaderSettingsModal extends Modal {
     save.addEventListener("click", async () => {
       this.plugin.data.settings.profileName = draft.profileName.trim() || "Your name";
       this.plugin.data.settings.profileSignature = draft.profileSignature.trim();
+      this.plugin.data.settings.accentColor = normalizeHexColor(draft.accentColor);
       this.plugin.data.settings.obsidianStartDate = draft.obsidianStartDate;
       this.plugin.data.settings.lockHomepage = draft.lockHomepage;
       for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
@@ -319,13 +513,24 @@ class YukiHomepageSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Theme preset")
-      .setDesc("Visual preset for the homepage view.")
-      .addDropdown((drop) => {
-        drop.addOption("petal", "Petal");
-        drop.setValue(this.plugin.data.settings.themePreset);
-        drop.onChange(async (value) => {
-          this.plugin.data.settings.themePreset = value;
+      .setName("Accent color")
+      .setDesc("Choose the homepage highlight color. Use a #RRGGBB value.")
+      .addText((text) => {
+        text.inputEl.type = "color";
+        text.setValue(normalizeHexColor(this.plugin.data.settings.accentColor));
+        text.onChange(async (value) => {
+          this.plugin.data.settings.accentColor = normalizeHexColor(value);
+          await this.plugin.persist();
+          this.plugin.refreshOpenViews();
+        });
+      })
+      .addText((text) => {
+        text.setPlaceholder("#f5c2e7");
+        text.setValue(normalizeHexColor(this.plugin.data.settings.accentColor));
+        text.onChange(async (value) => {
+          const next = normalizeHexColor(value, this.plugin.data.settings.accentColor);
+          this.plugin.data.settings.accentColor = next;
+          text.setValue(next);
           await this.plugin.persist();
           this.plugin.refreshOpenViews();
         });
@@ -403,27 +608,13 @@ class YukiHomepageSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Default layout")
-      .setDesc("Save the current widget positions, sizes, and widget set as the layout used by Reset.")
+      .setName(this.plugin.t("manageLayouts"))
+      .setDesc(this.plugin.t("manageLayoutsDesc"))
       .addButton((button) => {
-        button.setButtonText("Save current");
+        button.setButtonText(this.plugin.t("open"));
         button.setCta();
-        button.onClick(async () => {
-          await this.plugin.saveCurrentLayoutAsDefault();
-          new Notice("Current HomePulse layout saved as default.");
-        });
-      });
-
-    new Setting(containerEl)
-      .setName("Reset layout")
-      .setDesc("Restore the saved default widget positions, sizes, and widget set.")
-      .addButton((button) => {
-        button.setButtonText("Reset");
-        button.setWarning();
-        button.onClick(async () => {
-          if (!(await confirmResetLayout(this.app))) return;
-          await this.plugin.resetToDefaults();
-          new Notice("HomePulse layout reset.");
+        button.onClick(() => {
+          new LayoutManagerModal(this.app, this.plugin).open();
         });
       });
   }
@@ -439,6 +630,7 @@ class YukiHomepageView extends ItemView {
     this.widgetUiState = {};
     this.intervals = [];
     this.resizeObserver = null;
+    this.windowResizeHandler = null;
     this.responsiveColumns = 5;
   }
 
@@ -474,20 +666,29 @@ class YukiHomepageView extends ItemView {
   }
 
   disconnectResizeObserver() {
-    if (!this.resizeObserver) return;
-    this.resizeObserver.disconnect();
-    this.resizeObserver = null;
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    if (this.windowResizeHandler) {
+      window.removeEventListener("resize", this.windowResizeHandler);
+      this.windowResizeHandler = null;
+    }
   }
 
   observeResponsiveLayout(frame, columns) {
     this.responsiveColumns = columns;
-    if (typeof ResizeObserver === "undefined") return;
-    this.resizeObserver = new ResizeObserver(([entry]) => {
-      const nextColumns = getResponsiveColumnCount(entry.contentRect.width);
+    const refreshIfColumnsChanged = () => {
+      const layoutColumns = clampLayoutColumns(this.plugin.data.layout.columns, 5);
+      const nextColumns = this.editMode ? layoutColumns : Math.min(layoutColumns, getResponsiveColumnCount(getResponsiveBasisWidth(frame)));
       if (nextColumns === this.responsiveColumns) return;
       this.responsiveColumns = nextColumns;
       void this.renderView();
-    });
+    };
+    this.windowResizeHandler = refreshIfColumnsChanged;
+    window.addEventListener("resize", this.windowResizeHandler);
+    if (typeof ResizeObserver === "undefined") return;
+    this.resizeObserver = new ResizeObserver(refreshIfColumnsChanged);
     this.resizeObserver.observe(frame);
   }
 
@@ -499,6 +700,11 @@ class YukiHomepageView extends ItemView {
     const container = this.contentEl;
     container.empty();
     container.addClass("yh-view");
+    const accentColor = normalizeHexColor(this.plugin.data.settings.accentColor);
+    container.style.setProperty("--yh-accent", accentColor);
+    container.style.setProperty("--yh-accent-rgb", `${hexToRgb(accentColor).r}, ${hexToRgb(accentColor).g}, ${hexToRgb(accentColor).b}`);
+    container.style.setProperty("--komo-sakura", accentColor);
+    container.style.setProperty("--komo-border-sakura", rgbaFromHex(accentColor, 0.26));
 
     const frame = container.createDiv({ cls: "yh-frame" });
     const loading = frame.createDiv({ cls: "yh-loading", text: "Loading widgets..." });
@@ -534,14 +740,6 @@ class YukiHomepageView extends ItemView {
       await this.renderView();
     });
 
-    if (this.editMode) {
-      const headerControls = header.createDiv({ cls: "yh-header-controls" });
-      const settingsBtn = headerControls.createEl("button", { text: "Header settings" });
-      settingsBtn.addEventListener("click", () => {
-        new HeaderSettingsModal(this.app, this.plugin).open();
-      });
-    }
-
     const tick = () => {
       const now = new Date();
       const hour = now.getHours();
@@ -553,7 +751,7 @@ class YukiHomepageView extends ItemView {
             ? "AFTERNOON /"
             : "EVENING /";
       timeEl.setText(now.toLocaleTimeString("zh-CN", { hour12: false }));
-      dateEl.setText(`${formatLongDate(now)} · ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`);
+      dateEl.setText(`${formatLongDate(now, this.plugin.language)} · ${now.toLocaleDateString(this.plugin.language === "en" ? "en-US" : "zh-CN", { month: "short", day: "numeric", year: "numeric" })}`);
       periodEl.setText(period);
     };
     tick();
@@ -561,26 +759,34 @@ class YukiHomepageView extends ItemView {
 
     frame.createDiv({ cls: "yh-divider" });
 
-    const responsiveColumns = getResponsiveColumnCount(frame.clientWidth);
-    const renderedWidgets = buildResponsiveLayout(this.plugin.data.layout.widgets, responsiveColumns);
-    const canEditLayout = this.editMode && responsiveColumns === 5;
+    const layoutColumns = clampLayoutColumns(this.plugin.data.layout.columns, 5);
+    const viewportColumns = getResponsiveColumnCount(getResponsiveBasisWidth(frame));
+    const responsiveColumns = this.editMode ? layoutColumns : Math.min(layoutColumns, viewportColumns);
+    const renderedWidgets = responsiveColumns === layoutColumns
+      ? this.plugin.data.layout.widgets
+      : buildResponsiveLayout(this.plugin.data.layout.widgets, responsiveColumns);
+    const canEditLayout = this.editMode;
+    const canDragLayout = this.editMode;
 
     if (this.editMode) {
       const toolbar = frame.createDiv({ cls: "yh-toolbar yh-toolbar-compact" });
       toolbar.createDiv({
         cls: "yh-toolbar-label",
-        text: canEditLayout ? "layout editing" : "layout editing · resize window to edit"
+        text: canDragLayout
+          ? this.plugin.t("layoutEditing", { count: layoutColumns })
+          : this.plugin.t("layoutEditingResize", { count: layoutColumns })
       });
       const actions = toolbar.createDiv({ cls: "yh-toolbar-actions" });
-      if (canEditLayout) {
-        const addBtn = actions.createEl("button", { text: "Add widget" });
-        const resetBtn = actions.createEl("button", { text: "Reset" });
-        addBtn.addEventListener("click", () => this.openAddWidgetModal());
-        resetBtn.addEventListener("click", async () => {
-          if (!(await confirmResetLayout(this.app))) return;
-          await this.plugin.resetToDefaults();
-        });
-      }
+      const headerSettingsBtn = actions.createEl("button", { text: "Header settings" });
+      const addBtn = actions.createEl("button", { text: this.plugin.t("addWidget") });
+      const manageLayoutBtn = actions.createEl("button", { text: this.plugin.t("manageLayouts") });
+      headerSettingsBtn.addEventListener("click", () => {
+        new HeaderSettingsModal(this.app, this.plugin).open();
+      });
+      addBtn.addEventListener("click", () => this.openAddWidgetModal());
+      manageLayoutBtn.addEventListener("click", () => {
+        new LayoutManagerModal(this.app, this.plugin).open();
+      });
     }
 
     const grid = frame.createDiv({ cls: "yh-grid" });
@@ -589,7 +795,7 @@ class YukiHomepageView extends ItemView {
     if (canEditLayout) grid.addClass("is-editing");
 
     grid.addEventListener("dragover", (event) => {
-      if (!canEditLayout || !this.draggingWidgetId) return;
+      if (!canDragLayout || !this.draggingWidgetId) return;
       event.preventDefault();
       grid.addClass("is-drop-target");
     });
@@ -599,15 +805,15 @@ class YukiHomepageView extends ItemView {
     });
 
     grid.addEventListener("drop", async (event) => {
-      if (!canEditLayout || !this.draggingWidgetId) return;
+      if (!canDragLayout || !this.draggingWidgetId) return;
       event.preventDefault();
       grid.removeClass("is-drop-target");
       const widget = this.plugin.data.layout.widgets.find((item) => item.id === this.draggingWidgetId);
       if (!widget) return;
       const bounds = grid.getBoundingClientRect();
-      const cellWidth = bounds.width / this.plugin.data.layout.columns;
+      const cellWidth = bounds.width / layoutColumns;
       const cellHeight = 132;
-      const x = clamp(Math.floor((event.clientX - bounds.left) / cellWidth), 0, this.plugin.data.layout.columns - widget.w);
+      const x = clamp(Math.floor((event.clientX - bounds.left) / cellWidth), 0, layoutColumns - widget.w);
       const y = Math.max(0, Math.floor((event.clientY - bounds.top) / cellHeight));
       this.draggingWidgetId = "";
       await this.plugin.moveWidget(widget.id, x, y);
@@ -628,7 +834,7 @@ class YukiHomepageView extends ItemView {
       shell.style.setProperty("--yh-compact-w", String(Math.min(widget.w || 1, 2)));
       shell.dataset.widgetId = widget.id;
 
-      if (canEditLayout) {
+      if (canDragLayout) {
         shell.setAttribute("draggable", "true");
         shell.addClass("is-editing");
         shell.addEventListener("dragstart", (event) => {
@@ -668,7 +874,7 @@ class YukiHomepageView extends ItemView {
           const onMove = (moveEvent) => {
             const width = Math.max(columnWidth, moveEvent.clientX - shellBounds.left);
             const height = Math.max(rowHeight, moveEvent.clientY - shellBounds.top);
-            const maxWidth = renderedColumns === 5 ? 5 - widget.x : renderedColumns;
+            const maxWidth = renderedColumns === layoutColumns ? layoutColumns - widget.x : renderedColumns;
             nextW = clamp(Math.round((width + gap) / (columnWidth + gap)), 1, Math.min(5, maxWidth));
             nextH = clamp(Math.round((height + gap) / (rowHeight + gap)), 1, 5);
             shell.style.gridColumn = `${widget.x + 1} / span ${nextW}`;
@@ -701,7 +907,7 @@ class YukiHomepageView extends ItemView {
       if (canEditLayout) {
         const controls = cardHeader.createDiv({ cls: "yh-card-controls" });
         const widthSelect = controls.createEl("select", { cls: "yh-size-select" });
-        for (let width = 1; width <= 5; width += 1) {
+        for (let width = 1; width <= layoutColumns; width += 1) {
           const option = widthSelect.createEl("option", { value: String(width), text: `W${width}` });
           option.selected = width === widget.w;
         }
@@ -754,6 +960,11 @@ class YukiHomepageView extends ItemView {
         requestRender: () => this.renderView(),
         getState: () => this.plugin.getWidgetData(widget.id, widget.type).state,
         getConfig: () => this.plugin.getWidgetData(widget.id, widget.type).config,
+        getTimeLogs: (query = {}) => this.plugin.getTimeLogService().query(query),
+        createTimeLog: async (input) => this.plugin.getTimeLogService().create(input),
+        updateTimeLog: async (id, patch) => this.plugin.getTimeLogService().update(id, patch),
+        deleteTimeLog: async (id) => this.plugin.getTimeLogService().delete(id),
+        getTimeSummary: (range = "all", now = new Date()) => this.plugin.getTimeAggregation().summarize(range, now),
         getUiState: () => (this.widgetUiState[widget.id] ||= {}),
         setUiState: (patch) => {
           this.widgetUiState[widget.id] = { ...(this.widgetUiState[widget.id] || {}), ...patch };
@@ -767,6 +978,8 @@ class YukiHomepageView extends ItemView {
         openSettings: () => {
           this.openWidgetSettings(widget, widgetData, definition);
         },
+        openManualTimeRecord: () => this.plugin.openManualTimeRecordModal(),
+        openTimeLogList: () => this.plugin.openTimeLogListModal(),
         saveState: async (patch, rerender = false) => {
           await this.plugin.updateWidgetState(widget.id, patch);
           if (rerender) await this.renderView();
@@ -801,6 +1014,14 @@ class YukiHomepageView extends ItemView {
 }
 
 class YukiHomepagePlugin extends Plugin {
+  get language() {
+    return normalizeLanguage(this.data?.settings?.language);
+  }
+
+  t(key, vars = {}) {
+    return t(this.language, key, vars);
+  }
+
   async onload() {
     this.registry = createWidgetRegistry(this);
     this.data = this.normalizeData(await this.loadData());
@@ -878,6 +1099,47 @@ class YukiHomepagePlugin extends Plugin {
     await this.saveData(this.data);
   }
 
+  getTimeLogService() {
+    const plugin = this;
+    return new TimeLogService({
+      get timeLogs() {
+        return plugin.data.timeLogs || [];
+      },
+      set timeLogs(value) {
+        plugin.data.timeLogs = value;
+      },
+      persist: async () => {
+        plugin.data = plugin.normalizeData(plugin.data);
+        await plugin.persist();
+        plugin.scheduleRefresh();
+      }
+    });
+  }
+
+  getTimeAggregation() {
+    return new TimeAggregation(this.data.timeLogs || []);
+  }
+
+  getTimeSourceConfig() {
+    return this.getFirstWidgetConfig("pomodoro");
+  }
+
+  openManualTimeRecordModal() {
+    new ManualTimeRecordModal(this.app, this.getTimeSourceConfig(), async (input) => {
+      await this.getTimeLogService().create(input);
+    }, this.language).open();
+  }
+
+  openTimeLogListModal() {
+    new TimeLogListModal(
+      this.app,
+      () => this.getTimeLogService().query(),
+      async (id) => {
+        await this.getTimeLogService().delete(id);
+      }
+    ).open();
+  }
+
   scheduleRefresh() {
     window.clearTimeout(this.refreshTimer);
     this.refreshTimer = window.setTimeout(() => {
@@ -919,8 +1181,37 @@ class YukiHomepagePlugin extends Plugin {
     return leaf;
   }
 
-  async resetToDefaults() {
-    const targetLayout = deepClone(this.data.defaultLayout || DEFAULT_DATA.layout);
+  getLayoutPresets() {
+    const presets = Array.isArray(this.data.layoutPresets) && this.data.layoutPresets.length
+      ? this.data.layoutPresets
+      : DEFAULT_DATA.layoutPresets;
+    return presets.map((preset) => ({
+      id: preset.id,
+      name: preset.name,
+      isBuiltIn: Boolean(preset.isBuiltIn),
+      layout: deepClone(preset.layout)
+    }));
+  }
+
+  getLayoutPresetName(id) {
+    return this.getLayoutPresets().find((preset) => preset.id === id)?.name || "selected layout";
+  }
+
+  getLayoutPreset(id) {
+    return this.getLayoutPresets().find((preset) => preset.id === id) || this.getLayoutPresets()[0];
+  }
+
+  async resetToLayoutPreset(presetId) {
+    await this.applyLayoutPreset(presetId);
+  }
+
+  async loadLayoutPreset(presetId) {
+    await this.applyLayoutPreset(presetId);
+  }
+
+  async applyLayoutPreset(presetId) {
+    const preset = this.getLayoutPreset(presetId);
+    const targetLayout = deepClone(preset?.layout || DEFAULT_DATA.layout);
     const currentWidgets = this.data.widgets || {};
     const nextWidgets = {};
 
@@ -934,20 +1225,66 @@ class YukiHomepagePlugin extends Plugin {
 
     this.data.layout = targetLayout;
     this.data.widgets = nextWidgets;
+    this.data.defaultLayoutPresetId = preset?.id || "public-default";
     this.data = this.normalizeData(this.data);
     await this.persist();
     this.refreshOpenViews();
   }
 
-  async saveCurrentLayoutAsDefault() {
-    this.data.defaultLayout = deepClone(this.data.layout);
+  async deleteLayoutPreset(presetId) {
+    const presets = this.getLayoutPresets();
+    const target = presets.find((preset) => preset.id === presetId);
+    if (!target || target.isBuiltIn) return;
+    this.data.layoutPresets = presets.filter((preset) => preset.id !== presetId);
+    if (this.data.defaultLayoutPresetId === presetId) {
+      this.data.defaultLayoutPresetId = "public-default";
+    }
     this.data = this.normalizeData(this.data);
     await this.persist();
+    this.refreshOpenViews();
+  }
+
+  async resetToDefaults() {
+    await this.resetToLayoutPreset(this.data.defaultLayoutPresetId || "public-default");
+  }
+
+  async saveCurrentLayoutAsDefault() {
+    await this.saveCurrentLayoutPreset("Saved default");
+  }
+
+  async saveCurrentLayoutPreset(name, columns = this.data.layout.columns) {
+    const trimmed = String(name || "").trim();
+    const presetName = trimmed || `Layout ${new Date().toLocaleString("zh-CN", { hour12: false })}`;
+    const presets = this.getLayoutPresets();
+    const existing = presets.find((preset) => !preset.isBuiltIn && preset.name === presetName);
+    const layoutColumns = clampLayoutColumns(columns, this.data.layout.columns || 5);
+    const layout = {
+      ...deepClone(this.data.layout),
+      columns: layoutColumns,
+      widgets: packLayout(this.data.layout.widgets, layoutColumns, {}, [], true)
+    };
+    const nextPreset = {
+      id: existing?.id || randomId("layout"),
+      name: presetName,
+      updatedAt: Date.now(),
+      layout
+    };
+    this.data.layoutPresets = [
+      ...presets.filter((preset) => preset.isBuiltIn || preset.id !== nextPreset.id),
+      nextPreset
+    ];
+    this.data.defaultLayoutPresetId = nextPreset.id;
+    this.data.layout = deepClone(layout);
+    this.data = this.normalizeData(this.data);
+    await this.persist();
+    this.refreshOpenViews();
+    return nextPreset;
   }
 
   async addWidget(type) {
     const definition = this.getDefinition(type);
     if (!definition) return;
+    const columns = clampLayoutColumns(this.data.layout.columns, 5);
     const id = randomId(type);
     const widget = applySizePreset({
       id,
@@ -955,26 +1292,28 @@ class YukiHomepagePlugin extends Plugin {
       x: 0,
       y: this.data.layout.widgets.reduce((max, item) => Math.max(max, item.y + item.h), 0),
       sizePreset: definition.defaultSize.preset
-    }, definition.defaultSize.preset, 5);
+    }, definition.defaultSize.preset, columns);
     this.data.layout.widgets.push(widget);
     this.data.widgets[id] = {
       config: deepClone(definition.defaultConfig),
       state: deepClone(definition.defaultState)
     };
-    this.data.layout.widgets = packLayout(this.data.layout.widgets, 5, {}, [], true);
+    this.data.layout.widgets = packLayout(this.data.layout.widgets, columns, {}, [], true);
     await this.persist();
     this.refreshOpenViews();
   }
 
   async removeWidget(id) {
+    const columns = clampLayoutColumns(this.data.layout.columns, 5);
     this.data.layout.widgets = this.data.layout.widgets.filter((widget) => widget.id !== id);
     delete this.data.widgets[id];
-    this.data.layout.widgets = packLayout(this.data.layout.widgets, 5, {}, [], true);
+    this.data.layout.widgets = packLayout(this.data.layout.widgets, columns, {}, [], true);
     await this.persist();
     this.refreshOpenViews();
   }
 
   async moveWidget(id, x, y) {
+    const columns = clampLayoutColumns(this.data.layout.columns, 5);
     const preferred = {};
     const next = this.data.layout.widgets.map((widget) => {
       const copy = deepClone(widget);
@@ -985,31 +1324,33 @@ class YukiHomepagePlugin extends Plugin {
       }
       return copy;
     });
-    this.data.layout.widgets = packLayout(next, 5, preferred, [id], true);
+    this.data.layout.widgets = packLayout(next, columns, preferred, [id], true);
     await this.persist();
     this.refreshOpenViews();
   }
 
   async cycleWidgetSize(id) {
+    const columns = clampLayoutColumns(this.data.layout.columns, 5);
     const next = this.data.layout.widgets.map((widget) => {
       const copy = deepClone(widget);
       if (copy.id !== id) return copy;
       const definition = this.getDefinition(copy.type);
       copy.sizePreset = cycleValue(definition.allowedSizes, copy.sizePreset);
-      return applySizePreset(copy, copy.sizePreset, 5);
+      return applySizePreset(copy, copy.sizePreset, columns);
     });
-    this.data.layout.widgets = packLayout(next, 5, {}, [id], true);
+    this.data.layout.widgets = packLayout(next, columns, {}, [id], true);
     await this.persist();
     this.refreshOpenViews();
   }
 
   async setWidgetSize(id, sizePreset) {
+    const columns = clampLayoutColumns(this.data.layout.columns, 5);
     const next = this.data.layout.widgets.map((widget) => {
       const copy = deepClone(widget);
       if (copy.id !== id) return copy;
-      return applySizePreset(copy, sizePreset, 5);
+      return applySizePreset(copy, sizePreset, columns);
     });
-    this.data.layout.widgets = packLayout(next, 5, {}, [id], true);
+    this.data.layout.widgets = packLayout(next, columns, {}, [id], true);
     await this.persist();
     this.refreshOpenViews();
   }

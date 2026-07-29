@@ -1,7 +1,8 @@
-// @ts-nocheck
-import { DEFAULT_PROJECT_FOLDERS } from "../constants";
+﻿// @ts-nocheck
+import { DEFAULT_PROJECT_FOLDERS, DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { normalizeArray, parseLineList, renderEmpty } from "./widget-api";
+import { readProjectFilterConfig, renderProjectFilterSettings } from "../services/project-filter";
+import { renderEmpty } from "./widget-api";
 
 const { Setting } = require("obsidian");
 
@@ -19,13 +20,22 @@ export const projectsWidget = {
   shell: "panel",
   allowedSizes: ALL_SIZE_PRESETS,
   defaultSize: { preset: "W1H3", w: 1, h: 3 },
-  defaultConfig: { title: "projects", folders: DEFAULT_PROJECT_FOLDERS, limit: 10 },
+  defaultConfig: {
+    title: "projects",
+    projectFolders: DEFAULT_PROJECT_FOLDERS,
+    projectTags: [],
+    projectNamePrefixes: DEFAULT_PROJECT_NAME_PREFIXES,
+    limit: 10
+  },
   defaultState: {},
   async render(container, api) {
-    const folders = normalizeArray(api.widgetData.config.folders, DEFAULT_PROJECT_FOLDERS);
-    const items = api.snapshot.getProjects(folders, Number(api.widgetData.config.limit) || 10);
+    const filter = readProjectFilterConfig(api.widgetData.config, {
+      folders: DEFAULT_PROJECT_FOLDERS,
+      namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
+    });
+    const items = api.snapshot.getProjects(filter, Number(api.widgetData.config.limit) || 10);
     if (!items.length) {
-      renderEmpty(container, "No project notes found in the configured folders.");
+      renderEmpty(container, "No project notes found for this filter.");
       return;
     }
     const list = container.createDiv({ cls: "yh-list yh-project-list" });
@@ -54,11 +64,9 @@ export const projectsWidget = {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Folders").setDesc("One folder per line.").addTextArea((text) => {
-      text.setValue(normalizeArray(draft.folders, DEFAULT_PROJECT_FOLDERS).join("\n"));
-      text.onChange((value) => {
-        draft.folders = parseLineList(value);
-      });
+    renderProjectFilterSettings(container, draft, {
+      folders: DEFAULT_PROJECT_FOLDERS,
+      namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
     });
     new Setting(container).setName("Limit").addText((text) => {
       text.setValue(String(draft.limit || 10));
