@@ -32,9 +32,19 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify tag matches manifest version
+        shell: bash
+        run: |
+          manifest_version=$(node -p "require('./manifest.json').version")
+          test "$GITHUB_REF_NAME" = "$manifest_version" || {
+            echo "Tag $GITHUB_REF_NAME does not match manifest version $manifest_version"
+            exit 1
+          }
+
       - name: Verify output
         run: |
           test -f main.js || { echo "main.js not found"; exit 1; }
+          test -f manifest.json || { echo "manifest.json not found"; exit 1; }
           test -f styles.css || { echo "styles.css not found"; exit 1; }
 
       - name: Attest build provenance
@@ -42,6 +52,7 @@ jobs:
         with:
           subject-path: |
             main.js
+            manifest.json
             styles.css
 
       - name: Create release
@@ -49,5 +60,6 @@ jobs:
         with:
           files: |
             main.js
+            manifest.json
             styles.css
           generate_release_notes: true
