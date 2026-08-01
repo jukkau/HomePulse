@@ -9,10 +9,10 @@ import {
 import type { DefinitionResolver, HomepageLayoutPreset, PluginData, WidgetLayoutItem } from "../types";
 
 type NormalizeDeps = {
-  mergeDefaults: (base: any, saved: any) => any;
-  normalizeArray: (value: any, fallback: any) => any[];
+  mergeDefaults: (base: LooseValue, saved: LooseValue) => LooseValue;
+  normalizeArray: (value: LooseValue, fallback: LooseValue) => LooseValue[];
   randomId: (prefix: string) => string;
-  applySizePreset: (widget: any, preset: string, columns: number) => WidgetLayoutItem;
+  applySizePreset: (widget: LooseValue, preset: string, columns: number) => WidgetLayoutItem;
   packLayout: (items: WidgetLayoutItem[], columns: number) => WidgetLayoutItem[];
   deepClone: <T>(value: T) => T;
   getDefinition: DefinitionResolver;
@@ -27,7 +27,7 @@ export function normalizeData(saved: unknown, deps: NormalizeDeps): PluginData {
   return validateAndFillDefaults(migrated, deps);
 }
 
-function validateAndFillDefaults(migrated: any, deps: NormalizeDeps): PluginData {
+function validateAndFillDefaults(migrated: LooseValue, deps: NormalizeDeps): PluginData {
   const data = deps.mergeDefaults(DEFAULT_DATA, migrated || {});
 
   data.schemaVersion = CURRENT_SCHEMA_VERSION;
@@ -46,7 +46,7 @@ function validateAndFillDefaults(migrated: any, deps: NormalizeDeps): PluginData
   }
 
   const widgetMap = data.widgets && typeof data.widgets === "object" ? data.widgets : {};
-  const nextMap: Record<string, any> = {};
+  const nextMap: Record<string, LooseValue> = {};
 
   for (const widget of data.layout.widgets) {
     const definition = deps.getDefinition(widget.type);
@@ -69,7 +69,7 @@ function validateAndFillDefaults(migrated: any, deps: NormalizeDeps): PluginData
   return data;
 }
 
-function normalizeLayout(rawLayout: any, fallbackLayout: any, deps: NormalizeDeps): any {
+function normalizeLayout(rawLayout: LooseValue, fallbackLayout: LooseValue, deps: NormalizeDeps): LooseValue {
   const layout = rawLayout && typeof rawLayout === "object" ? rawLayout : fallbackLayout;
   const columns = clampLayoutColumns(layout.columns, fallbackLayout.columns || 5);
   const rawWidgets = deps.normalizeArray(layout.widgets, fallbackLayout.widgets);
@@ -94,14 +94,14 @@ function normalizeLayout(rawLayout: any, fallbackLayout: any, deps: NormalizeDep
   };
 }
 
-function clampLayoutColumns(value: any, fallback = 5): number {
+function clampLayoutColumns(value: LooseValue, fallback = 5): number {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.max(1, Math.min(5, Math.round(n)));
 }
 
-function normalizeLayoutPresets(data: any, deps: NormalizeDeps): HomepageLayoutPreset[] {
-  const builtIn = (DEFAULT_DATA.layoutPresets || []).map((preset: any) => ({
+function normalizeLayoutPresets(data: LooseValue, deps: NormalizeDeps): HomepageLayoutPreset[] {
+  const builtIn = (DEFAULT_DATA.layoutPresets || []).map((preset: LooseValue) => ({
     id: preset.id,
     name: preset.name,
     isBuiltIn: true,

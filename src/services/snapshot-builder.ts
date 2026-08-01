@@ -33,14 +33,14 @@ function stripTaskText(text: string): string {
 }
 
 export class SnapshotBuilder {
-  app: any;
-  plugin: any;
-  files: any[];
-  projectFiles: any[];
-  projectIndex: any[];
-  taskIndex: any[];
-  dailyNotes: Map<string, any[]>;
-  techTree: any;
+  app: LooseValue;
+  plugin: LooseValue;
+  files: LooseValue[];
+  projectFiles: LooseValue[];
+  projectIndex: LooseValue[];
+  taskIndex: LooseValue[];
+  dailyNotes: Map<string, LooseValue[]>;
+  techTree: LooseValue;
   now: Date;
   openTaskCount: number;
   doneTaskCount: number;
@@ -60,7 +60,7 @@ export class SnapshotBuilder {
   updatedAreasThisWeek: number;
   techTreeSettings: { source: string; areaRoot: string; activeProjectRoot: string };
 
-  constructor(app: any, plugin: any) {
+  constructor(app: LooseValue, plugin: LooseValue) {
     this.app = app;
     this.plugin = plugin;
     this.files = [];
@@ -180,9 +180,9 @@ export class SnapshotBuilder {
     this.notesDailyLast7 = buckets;
 
     this.updatedAreasThisWeek = (this.techTree?.nodes || [])
-      .filter((node: any) => node.kind === "area" && node.link)
-      .map((node: any) => this.app.vault.getAbstractFileByPath(node.link))
-      .filter((file: any) => file && Number(file.stat?.mtime || 0) >= weekStart).length;
+      .filter((node: LooseValue) => node.kind === "area" && node.link)
+      .map((node: LooseValue) => this.app.vault.getAbstractFileByPath(node.link))
+      .filter((file: LooseValue) => file && Number(file.stat?.mtime || 0) >= weekStart).length;
   }
 
   computeVaultUsage(): void {
@@ -255,19 +255,19 @@ export class SnapshotBuilder {
     );
   }
 
-  getProjects(filter: Required<ProjectFilterDefaults>, limit: number): any[] {
+  getProjects(filter: Required<ProjectFilterDefaults>, limit: number): LooseValue[] {
     const list = this.projectIndex
       .filter((item) => matchesProjectFilter(this.app, item.file, filter))
       .sort((a, b) => b.mtime - a.mtime);
     return limit > 0 ? list.slice(0, limit) : list;
   }
 
-  getOpenTasks(filter: Required<ProjectFilterDefaults>, limit: number): any[] {
+  getOpenTasks(filter: Required<ProjectFilterDefaults>, limit: number): LooseValue[] {
     const list = this.taskIndex.filter((item) => matchesProjectFilter(this.app, item.file, filter));
     return limit > 0 ? list.slice(0, limit) : list;
   }
 
-  getDailyNotesForDate(key: string): any[] {
+  getDailyNotesForDate(key: string): LooseValue[] {
     return this.dailyNotes.get(key) || [];
   }
 }

@@ -21,24 +21,24 @@ const TIME_LOG_ACTIVITY_TYPES = new Set<TimeLogActivityType>([
 ]);
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
-export function clampNumber(value: any, min: number, max: number, fallback: number): number {
+export function clampNumber(value: LooseValue, min: number, max: number, fallback: number): number {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.max(min, Math.min(max, n));
 }
 
-export function asString(value: any, fallback = ""): string {
+export function asString(value: LooseValue, fallback = ""): string {
   if (value == null) return fallback;
   return String(value);
 }
 
-export function asStringArray(value: any, fallback: any = []): string[] {
+export function asStringArray(value: LooseValue, fallback: LooseValue = []): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
   if (typeof value === "string") return parseLineList(value);
   return Array.isArray(fallback) ? fallback.slice() : [];
 }
 
-export function asPlainObject(value: any, fallback: any = {}): any {
+export function asPlainObject(value: LooseValue, fallback: LooseValue = {}): LooseValue {
   if (value && typeof value === "object" && !Array.isArray(value)) return value;
   return fallback && typeof fallback === "object" ? { ...fallback } : {};
 }
@@ -46,7 +46,7 @@ export function asPlainObject(value: any, fallback: any = {}): any {
 /**
  * Validate a single layout widget entry. Returns a cleaned partial or null if unusable.
  */
-export function validateLayoutWidget(widget: any): any {
+export function validateLayoutWidget(widget: LooseValue): LooseValue {
   if (!widget || typeof widget !== "object") return null;
   const type = asString(widget.type).trim();
   if (!type) return null;
@@ -64,7 +64,7 @@ export function validateLayoutWidget(widget: any): any {
 /**
  * Type-aware config validation. Falls back field-by-field to definition.defaultConfig.
  */
-export function validateWidgetConfig(type: string, config: any, defaultConfig: any = {}): any {
+export function validateWidgetConfig(type: string, config: LooseValue, defaultConfig: LooseValue = {}): LooseValue {
   const base = asPlainObject(defaultConfig, {});
   const raw = asPlainObject(config, {});
   const next = { ...base, ...raw };
@@ -135,7 +135,7 @@ export function validateWidgetConfig(type: string, config: any, defaultConfig: a
       next.useFavicons = raw.useFavicons === true;
       const items = Array.isArray(raw.items) ? raw.items : base.items || [];
       next.items = items
-        .map((item: any) => {
+        .map((item: LooseValue) => {
           if (!item || typeof item !== "object") return null;
           const value = asString(item.value, "").trim();
           if (!value) return null;
@@ -157,7 +157,7 @@ export function validateWidgetConfig(type: string, config: any, defaultConfig: a
       next.secondaryTitle = asString(raw.secondaryTitle, base.secondaryTitle || "");
       const items = Array.isArray(raw.items) ? raw.items : base.items || [];
       next.items = items
-        .map((item: any) => {
+        .map((item: LooseValue) => {
           if (!item || typeof item !== "object") return null;
           const actionType = QUICK_ACTION_TYPES.has(item.type) ? item.type : "command";
           return {
@@ -169,7 +169,7 @@ export function validateWidgetConfig(type: string, config: any, defaultConfig: a
         .filter(Boolean);
       const secondaryItems = Array.isArray(raw.secondaryItems) ? raw.secondaryItems : base.secondaryItems || [];
       next.secondaryItems = secondaryItems
-        .map((item: any) => {
+        .map((item: LooseValue) => {
           if (!item || typeof item !== "object") return null;
           const actionType = QUICK_ACTION_TYPES.has(item.type) ? item.type : "command";
           return {
@@ -239,7 +239,7 @@ export function validateWidgetConfig(type: string, config: any, defaultConfig: a
 /**
  * Type-aware state validation. Falls back field-by-field to definition.defaultState.
  */
-export function validateWidgetState(type: string, state: any, defaultState: any = {}): any {
+export function validateWidgetState(type: string, state: LooseValue, defaultState: LooseValue = {}): LooseValue {
   const base = asPlainObject(defaultState, {});
   const raw = asPlainObject(state, {});
 
@@ -250,7 +250,7 @@ export function validateWidgetState(type: string, state: any, defaultState: any 
     case "pomodoro": {
       const workMinutes = 25;
       const status = POMO_STATUS.has(raw.status) ? raw.status : base.status || "idle";
-      const next: any = {
+      const next: LooseValue = {
         status,
         remainingSeconds: clampNumber(
           raw.remainingSeconds,
@@ -265,7 +265,7 @@ export function validateWidgetState(type: string, state: any, defaultState: any 
       const activeTarget = validatePomodoroTarget(raw.activeTarget);
       if (activeTarget) next.activeTarget = activeTarget;
       const recentTargets = normalizeArray(raw.recentTargets, [])
-        .map((item: any) => validatePomodoroTarget(item))
+        .map((item: LooseValue) => validatePomodoroTarget(item))
         .filter(Boolean)
         .slice(0, 8);
       if (recentTargets.length) next.recentTargets = recentTargets;
@@ -291,7 +291,7 @@ export function validateWidgetState(type: string, state: any, defaultState: any 
 /**
  * Validate a full stored widget slot { config, state }.
  */
-export function validateWidgetStoredData(type: string, stored: any, definition: any): any {
+export function validateWidgetStoredData(type: string, stored: LooseValue, definition: LooseValue): LooseValue {
   const slot = asPlainObject(stored, {});
   const defaultConfig = definition ? definition.defaultConfig : {};
   const defaultState = definition ? definition.defaultState : {};
@@ -304,7 +304,7 @@ export function validateWidgetStoredData(type: string, stored: any, definition: 
 /**
  * Validate settings object against defaults.
  */
-export function validateSettings(settings: any, defaults: any): any {
+export function validateSettings(settings: LooseValue, defaults: LooseValue): LooseValue {
   const base = asPlainObject(defaults, {});
   const raw = asPlainObject(settings, {});
   return {
@@ -324,7 +324,7 @@ export function validateSettings(settings: any, defaults: any): any {
   };
 }
 
-export function validateTimeLog(raw: any): TimeLog | null {
+export function validateTimeLog(raw: LooseValue): TimeLog | null {
   const item = asPlainObject(raw, null);
   if (!item) return null;
 
@@ -377,26 +377,26 @@ export function validateTimeLog(raw: any): TimeLog | null {
   return next;
 }
 
-export function validateTimeLogs(value: any): TimeLog[] {
+export function validateTimeLogs(value: LooseValue): TimeLog[] {
   return normalizeArray(value, [])
-    .map((item: any) => validateTimeLog(item))
+    .map((item: LooseValue) => validateTimeLog(item))
     .filter((item: TimeLog | null): item is TimeLog => Boolean(item))
     .sort((a: TimeLog, b: TimeLog) => b.startTime - a.startTime);
 }
 
-function normalizeTimeTargetId(targetType: TimeLogTargetType, value: any): string {
+function normalizeTimeTargetId(targetType: TimeLogTargetType, value: LooseValue): string {
   if (targetType === "task") return asString(value, "QuickCapture").trim() || "QuickCapture";
   return asString(value, "").trim();
 }
 
-function validatePomodoroTarget(raw: any): any | null {
+function validatePomodoroTarget(raw: LooseValue): LooseValue | null {
   const item = asPlainObject(raw, null);
   if (!item) return null;
   const type = TIME_LOG_TARGET_TYPES.has(item.type) ? item.type : null;
   const id = type === "task" ? asString(item.id, "QuickCapture").trim() : asString(item.id, "").trim();
   const title = type === "task" ? asString(item.title, id || "QuickCapture").trim() : asString(item.title, id).trim();
   if (!type || !id || !title) return null;
-  const next: any = { type, id, title };
+  const next: LooseValue = { type, id, title };
   if (type === "project") {
     const areaId = asString(item.areaId, "").trim();
     if (areaId) {

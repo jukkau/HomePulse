@@ -1,19 +1,19 @@
 // Shared value helpers used by both the plugin core and widget definitions.
 // Single source of truth: do not re-declare these in main.ts or widget-api.ts.
 
-export function deepClone(value: any): any {
+export function deepClone(value: LooseValue): LooseValue {
   return JSON.parse(JSON.stringify(value));
 }
 
-export function mergeDefaults(base: any, saved: any): any {
+export function mergeDefaults(base: LooseValue, saved: LooseValue): LooseValue {
   if (Array.isArray(base)) {
     return Array.isArray(saved) ? deepClone(saved) : deepClone(base);
   }
   if (!base || typeof base !== "object") {
     return saved === undefined ? base : saved;
   }
-  const next: Record<string, any> = {};
-  const source: Record<string, any> = saved && typeof saved === "object" ? saved : {};
+  const next: Record<string, LooseValue> = {};
+  const source: Record<string, LooseValue> = saved && typeof saved === "object" ? saved : {};
   for (const key of Object.keys(base)) {
     next[key] = mergeDefaults(base[key], source[key]);
   }
@@ -25,11 +25,11 @@ export function mergeDefaults(base: any, saved: any): any {
   return next;
 }
 
-export function normalizeArray(value: any, fallback: any): any {
+export function normalizeArray(value: LooseValue, fallback: LooseValue): LooseValue {
   return Array.isArray(value) ? value.filter(Boolean) : deepClone(fallback);
 }
 
-export function parseLineList(raw: any): string[] {
+export function parseLineList(raw: LooseValue): string[] {
   return String(raw || "")
     .split(/\r?\n|,/)
     .map((item) => item.trim())

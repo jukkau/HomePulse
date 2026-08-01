@@ -22,12 +22,12 @@ function stripKnownPrefix(name: string): string {
     .trim();
 }
 
-function readTitle(file: any, frontmatter: any = {}): string {
+function readTitle(file: LooseValue, frontmatter: LooseValue = {}): string {
   const title = String(frontmatter.title || "").trim();
   return title || stripKnownPrefix(file?.basename || "");
 }
 
-export function projectTargetFromFile(app: any, file: any): TimeLogTarget | null {
+export function projectTargetFromFile(app: LooseValue, file: LooseValue): TimeLogTarget | null {
   if (!file) return null;
   const cache = app.metadataCache.getFileCache(file) || {};
   const frontmatter = cache.frontmatter || {};
@@ -42,7 +42,7 @@ export function projectTargetFromFile(app: any, file: any): TimeLogTarget | null
   };
 }
 
-export function areaTargetFromFile(app: any, file: any): TimeLogTarget | null {
+export function areaTargetFromFile(app: LooseValue, file: LooseValue): TimeLogTarget | null {
   if (!file) return null;
   const cache = app.metadataCache.getFileCache(file) || {};
   const title = readTitle(file, cache.frontmatter || {});
@@ -50,7 +50,7 @@ export function areaTargetFromFile(app: any, file: any): TimeLogTarget | null {
   return { type: "area", id: title, title };
 }
 
-export function quickCaptureTaskTarget(app?: any, taskFile = QUICK_CAPTURE_PATH): TimeLogTarget {
+export function quickCaptureTaskTarget(app?: LooseValue, taskFile = QUICK_CAPTURE_PATH): TimeLogTarget {
   const file = app ? getTaskFile(app, taskFile) : null;
   if (file) {
     const cache = app.metadataCache.getFileCache(file) || {};
@@ -74,35 +74,35 @@ export function quickTarget(title: string): TimeLogTarget | null {
   return { type: "quick", id: clean, title: clean };
 }
 
-export function getQuickCaptureFile(app: any, taskFile = QUICK_CAPTURE_PATH): any | null {
+export function getQuickCaptureFile(app: LooseValue, taskFile = QUICK_CAPTURE_PATH): LooseValue | null {
   return getTaskFile(app, taskFile);
 }
 
-export function listProjectTargets(app: any, config: ProjectFilterConfig = {}, limit = 24): TimeLogTarget[] {
+export function listProjectTargets(app: LooseValue, config: ProjectFilterConfig = {}, limit = 24): TimeLogTarget[] {
   const filter = readProjectFilterConfig(config, {
     folders: [],
     tags: ["type/project"],
     namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
   });
   const targets = app.vault.getMarkdownFiles()
-    .filter((file: any) => isProjectFile(app, file))
-    .filter((file: any) => matchesProjectFilter(app, file, filter))
-    .map((file: any) => projectTargetFromFile(app, file))
+    .filter((file: LooseValue) => isProjectFile(app, file))
+    .filter((file: LooseValue) => matchesProjectFilter(app, file, filter))
+    .map((file: LooseValue) => projectTargetFromFile(app, file))
     .filter(Boolean);
   return uniqueTargets(targets).slice(0, limit);
 }
 
-export function listAreaTargets(app: any, config: AreaFilterConfig = {}, limit = 24): TimeLogTarget[] {
+export function listAreaTargets(app: LooseValue, config: AreaFilterConfig = {}, limit = 24): TimeLogTarget[] {
   const filter = readAreaFilterConfig(config);
   const targets = app.vault.getMarkdownFiles()
-    .filter((file: any) => isAreaFile(app, file))
-    .filter((file: any) => matchesProjectFilter(app, file, filter))
-    .map((file: any) => areaTargetFromFile(app, file))
+    .filter((file: LooseValue) => isAreaFile(app, file))
+    .filter((file: LooseValue) => matchesProjectFilter(app, file, filter))
+    .map((file: LooseValue) => areaTargetFromFile(app, file))
     .filter(Boolean);
   return uniqueTargets(targets).slice(0, limit);
 }
 
-function isProjectFile(app: any, file: any): boolean {
+function isProjectFile(app: LooseValue, file: LooseValue): boolean {
   const cache = app.metadataCache.getFileCache(file) || {};
   const frontmatter = cache.frontmatter || {};
   if (String(frontmatter.type || "").toLowerCase() === "project") return true;
@@ -123,11 +123,11 @@ function readAreaFilterConfig(config: AreaFilterConfig): Required<ProjectFilterD
   });
 }
 
-function getTaskFile(app: any, taskFile = QUICK_CAPTURE_PATH): any | null {
+function getTaskFile(app: LooseValue, taskFile = QUICK_CAPTURE_PATH): LooseValue | null {
   return app.vault.getAbstractFileByPath(normalizePath(taskFile || QUICK_CAPTURE_PATH)) || null;
 }
 
-function inheritedAreaFromProject(app: any, projectFile: any, frontmatter: any): TimeLogTarget | null {
+function inheritedAreaFromProject(app: LooseValue, projectFile: LooseValue, frontmatter: LooseValue): TimeLogTarget | null {
   const areaValues = asArray(frontmatter.area);
   for (const rawArea of areaValues) {
     const linkpath = extractLinkpath(rawArea);
@@ -144,27 +144,27 @@ function inheritedAreaFromProject(app: any, projectFile: any, frontmatter: any):
   return null;
 }
 
-function asArray(value: any): any[] {
+function asArray(value: LooseValue): LooseValue[] {
   if (Array.isArray(value)) return value;
   if (value == null || value === "") return [];
   return [value];
 }
 
-function extractLinkpath(value: any): string {
+function extractLinkpath(value: LooseValue): string {
   const text = String(value || "").trim();
   const wikiLink = /^\[\[([^|\]#]+)(?:#[^|\]]*)?(?:\|[^\]]*)?\]\]$/.exec(text);
   return normalizePath((wikiLink ? wikiLink[1] : text).replace(/\.md$/i, ""));
 }
 
-function findAreaFileByBasename(app: any, linkpath: string): any | null {
+function findAreaFileByBasename(app: LooseValue, linkpath: string): LooseValue | null {
   const basename = normalizePath(linkpath).split("/").pop()?.toLowerCase();
   if (!basename) return null;
-  return app.vault.getMarkdownFiles().find((file: any) => {
+  return app.vault.getMarkdownFiles().find((file: LooseValue) => {
     return String(file.basename || "").toLowerCase() === basename && isAreaFile(app, file);
   }) || null;
 }
 
-function isAreaFile(app: any, file: any): boolean {
+function isAreaFile(app: LooseValue, file: LooseValue): boolean {
   const cache = app.metadataCache.getFileCache(file) || {};
   const frontmatter = cache.frontmatter || {};
   if (String(frontmatter.type || "").toLowerCase() === "area") return true;
@@ -173,18 +173,18 @@ function isAreaFile(app: any, file: any): boolean {
   return String(file.basename || "").startsWith("Area_");
 }
 
-function hasTag(cache: any, target: string): boolean {
+function hasTag(cache: LooseValue, target: string): boolean {
   return collectTags(cache).has(target.replace(/^#/, ""));
 }
 
-function hasTagPrefix(cache: any, prefix: string): boolean {
+function hasTagPrefix(cache: LooseValue, prefix: string): boolean {
   for (const tag of collectTags(cache)) {
     if (tag.startsWith(prefix)) return true;
   }
   return false;
 }
 
-function collectTags(cache: any): Set<string> {
+function collectTags(cache: LooseValue): Set<string> {
   const tags = new Set<string>();
   for (const entry of cache.tags || []) {
     const tag = String(entry.tag || "").replace(/^#/, "").trim();
@@ -199,7 +199,7 @@ function collectTags(cache: any): Set<string> {
   return tags;
 }
 
-function uniqueTargets(targets: any[]): TimeLogTarget[] {
+function uniqueTargets(targets: LooseValue[]): TimeLogTarget[] {
   const seen = new Set<string>();
   const next: TimeLogTarget[] = [];
   for (const target of targets) {
