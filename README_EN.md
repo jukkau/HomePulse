@@ -73,8 +73,8 @@ HomePulse is self-contained and does not require any community plugin. Dashboard
 | Plugin | Requirement | When it is used |
 |---|---|---|
 | **Daily Notes** | Optional core plugin | Required only when a System item uses the `daily-note` action. Without it, only that button is unavailable. |
-| **QuickAdd** | Optional community plugin | Required only when you configure a System command such as `quickadd:runQuickAdd`. It is not included in the public defaults. |
-| **cMenu** | Not required | HomePulse has no cMenu integration or dependency. |
+| **QuickAdd** | Optional community plugin | Required only when a button in the System widget is configured to run a QuickAdd command such as `quickadd:runQuickAdd`. Other System buttons do not depend on QuickAdd. |
+| **cMenu** | Not required | HomePulse does not depend on cMenu. Even when a System button runs a QuickAdd command, only QuickAdd is required. |
 
 - Core dashboard data stays local and no files are uploaded.
 - Optional bookmark favicons and external music links may contact the configured third-party service only when you enable or open them.
@@ -166,7 +166,9 @@ npm run build      # production build
 - [x] TypeScript strict mode
 - [x] GitHub Actions release workflow with artifact attestation
 - [x] Time Flow MVP with Pomodoro attribution, manual records, and local log deletion
-- [ ] More theme adaptations
+- [x] Custom theme colors
+- [ ] Light and dark display mode configuration
+- [ ] Chinese and English interface switching (the current interface is primarily English)
 - [ ] Widget configuration enhancements
 - [ ] Capability Growth from aggregated time records
 

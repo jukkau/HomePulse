@@ -73,8 +73,8 @@ HomePulse 不依赖其他 Obsidian 社区插件。Dashboard 数据主要来自�
 | 插件 | 是否需要 | 使用场景 |
 |---|---|---|
 | **Daily Notes** | 可选核心插件 | 仅当 System 项使用 `daily-note` 动作时需要；未启用时只有该按钮不可用。 |
-| **QuickAdd** | 可选社区插件 | 仅当你配置 `quickadd:runQuickAdd` 等 System 命令时需要；公开默认配置不包含它。 |
-| **cMenu** | 不需要 | HomePulse 没有 cMenu 集成或依赖。 |
+| **QuickAdd** | 可选社区插件 | 仅当 System 组件中的按钮配置为执行 QuickAdd 提供的命令（如 `quickadd:runQuickAdd`）时需要；其他 System 按钮不依赖 QuickAdd。 |
+| **cMenu** | 不需要 | HomePulse 不依赖 cMenu；即使 System 按钮调用 QuickAdd 命令，也只需安装 QuickAdd。 |
 
 - 核心 Dashboard 数据不会上传。
 - 书签 favicon 和外部音乐链接只有在启用或打开时，才可能访问对应第三方服务。
@@ -166,7 +166,9 @@ npm run build      # production build
 - [x] 支持 TypeScript strict mode
 - [x] 完成 GitHub Actions 发布流程和 artifact attestation
 - [x] 完成 Time Flow MVP，支持 Pomodoro 归因、手动记录和本地日志删除
-- [ ] 增加更多主题适配
+- [x] 支持自定义主题色
+- [ ] 增加浅色/深色显示模式配置
+- [ ] 增加插件界面的中英文切换（当前界面以英文为主）
 - [ ] 增强 Widget 配置能力
 - [ ] 基于聚合时间记录建设 Capability Growth
 
