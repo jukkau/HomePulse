@@ -16,11 +16,11 @@ export type ProjectFilterDefaults = {
   namePrefixes?: string[];
 };
 
-function normalizeToken(value: any): string {
+function normalizeToken(value: LooseValue): string {
   return String(value || "").replace(/^#/, "").trim();
 }
 
-export function normalizeProjectFilterList(value: any, fallback: any = []): string[] {
+export function normalizeProjectFilterList(value: LooseValue, fallback: LooseValue = []): string[] {
   const source = Array.isArray(value) ? value : value == null || value === "" ? fallback : parseLineList(value);
   return (Array.isArray(source) ? source : [source])
     .map(normalizeToken)
@@ -35,7 +35,7 @@ export function readProjectFilterConfig(config: ProjectFilterConfig, defaults: P
   };
 }
 
-export function withinAnyProjectFolder(file: any, folders: string[]): boolean {
+export function withinAnyProjectFolder(file: LooseValue, folders: string[]): boolean {
   if (!folders.length) return true;
   const path = normalizePath(file.path);
   return folders.some((folder) => {
@@ -44,13 +44,13 @@ export function withinAnyProjectFolder(file: any, folders: string[]): boolean {
   });
 }
 
-export function matchesAnyProjectNamePrefix(file: any, prefixes: string[]): boolean {
+export function matchesAnyProjectNamePrefix(file: LooseValue, prefixes: string[]): boolean {
   if (!prefixes.length) return true;
   const basename = String(file.basename || "");
   return prefixes.some((prefix) => basename.startsWith(prefix));
 }
 
-export function getProjectFileTags(app: any, file: any): Set<string> {
+export function getProjectFileTags(app: LooseValue, file: LooseValue): Set<string> {
   const cache = app.metadataCache.getFileCache(file) || {};
   const tags = new Set<string>();
   for (const entry of cache.tags || []) {
@@ -66,19 +66,19 @@ export function getProjectFileTags(app: any, file: any): Set<string> {
   return tags;
 }
 
-export function matchesAllProjectTags(app: any, file: any, tags: string[]): boolean {
+export function matchesAllProjectTags(app: LooseValue, file: LooseValue, tags: string[]): boolean {
   if (!tags.length) return true;
   const present = getProjectFileTags(app, file);
   return tags.every((tag) => present.has(tag));
 }
 
-export function matchesProjectFilter(app: any, file: any, filter: Required<ProjectFilterDefaults>): boolean {
+export function matchesProjectFilter(app: LooseValue, file: LooseValue, filter: Required<ProjectFilterDefaults>): boolean {
   return withinAnyProjectFolder(file, filter.folders)
     && matchesAnyProjectNamePrefix(file, filter.namePrefixes)
     && matchesAllProjectTags(app, file, filter.tags);
 }
 
-export function renderProjectFilterSettings(container: any, draft: any, defaults: ProjectFilterDefaults = {}): void {
+export function renderProjectFilterSettings(container: LooseValue, draft: LooseValue, defaults: ProjectFilterDefaults = {}): void {
   const filter = readProjectFilterConfig(draft, defaults);
   new Setting(container).setName("Project folders").setDesc("One vault-relative folder per line. Empty means any folder.").addTextArea((text) => {
     text.setValue(filter.folders.join("\n"));

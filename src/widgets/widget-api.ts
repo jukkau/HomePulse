@@ -12,7 +12,7 @@ export function localDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function countDistinctCompletionDays(completions: any): number {
+export function countDistinctCompletionDays(completions: LooseValue): number {
   const days = new Set();
   for (const [key, completed] of Object.entries(completions || {})) {
     if (!completed) continue;
@@ -37,11 +37,11 @@ export function addDays(date: Date, days: number): Date {
   return copy;
 }
 
-export function serializeQuickActions(items: any): string {
-  return normalizeArray(items, []).map((item: any) => `${item.label}|${item.type}|${item.value}`).join("\n");
+export function serializeQuickActions(items: LooseValue): string {
+  return normalizeArray(items, []).map((item: LooseValue) => `${item.label}|${item.type}|${item.value}`).join("\n");
 }
 
-export function parseQuickActions(raw: any): any[] {
+export function parseQuickActions(raw: LooseValue): LooseValue[] {
   return String(raw || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -56,18 +56,18 @@ export function parseQuickActions(raw: any): any[] {
     });
 }
 
-export function formatSeconds(total: any): string {
+export function formatSeconds(total: LooseValue): string {
   const safe = Math.max(0, Number(total) || 0);
   const minutes = String(Math.floor(safe / 60)).padStart(2, "0");
   const seconds = String(safe % 60).padStart(2, "0");
   return `${minutes}:${seconds}`;
 }
 
-export function renderEmpty(container: any, text: string): void {
+export function renderEmpty(container: LooseValue, text: string): void {
   container.createDiv({ cls: "yh-empty", text });
 }
 
-export function createSvg(parent: any, tag: string, attributes: Record<string, string> = {}): SVGElement {
+export function createSvg(parent: LooseValue, tag: string, attributes: Record<string, string> = {}): SVGElement {
   const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
   for (const [key, value] of Object.entries(attributes)) {
     node.setAttribute(key, String(value));
@@ -76,7 +76,7 @@ export function createSvg(parent: any, tag: string, attributes: Record<string, s
   return node;
 }
 
-export function reconcilePomodoroState(state: any, config: any): any {
+export function reconcilePomodoroState(state: LooseValue, config: LooseValue): LooseValue {
   const workSeconds = (Number(config.workMinutes) || 25) * 60;
   const breakSeconds = (Number(config.breakMinutes) || 5) * 60;
   const next = mergeDefaults({
@@ -122,7 +122,7 @@ export function reconcilePomodoroState(state: any, config: any): any {
   return next;
 }
 
-export function calculateHabitRate(habits: any, completions: any, weekStart: Date, habitDays: number): number {
+export function calculateHabitRate(habits: LooseValue, completions: LooseValue, weekStart: Date, habitDays: number): number {
   const list = normalizeArray(habits, []);
   const total = list.length * habitDays;
   if (!total) return 0;
@@ -137,7 +137,7 @@ export function calculateHabitRate(habits: any, completions: any, weekStart: Dat
   return Math.round((done / total) * 100);
 }
 
-export function parseMetricList(raw: any): string[] {
+export function parseMetricList(raw: LooseValue): string[] {
   const allowed = ["projects", "tasks", "habits", "pomodoro"];
   const items = String(raw || "")
     .split(",")

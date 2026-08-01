@@ -1,4 +1,4 @@
-﻿import { DEFAULT_PROJECT_NAME_PREFIXES, DEFAULT_TECH_TREE_SOURCE } from "../constants";
+import { DEFAULT_PROJECT_NAME_PREFIXES, DEFAULT_TECH_TREE_SOURCE } from "../constants";
 import { matchesProjectFilter, readProjectFilterConfig } from "./project-filter";
 
 const {
@@ -15,18 +15,18 @@ function withinFolder(path: string, folder: string): boolean {
   return normalizedPath === normalizedFolder || normalizedPath.startsWith(`${normalizedFolder}/`);
 }
 
-function asArray(value: any): any[] {
+function asArray(value: LooseValue): LooseValue[] {
   if (Array.isArray(value)) return value;
   if (value == null || value === "") return [];
   return [value];
 }
 
-function getFrontmatter(app: any, file: any): any {
+function getFrontmatter(app: LooseValue, file: LooseValue): LooseValue {
   const cache = app.metadataCache.getFileCache(file) || {};
   return cache.frontmatter || {};
 }
 
-function getValueGroup(frontmatter: any): any | null {
+function getValueGroup(frontmatter: LooseValue): LooseValue | null {
   for (const rawTag of asArray(frontmatter.tags)) {
     const tag = String(rawTag || "").trim().replace(/^#/, "");
     if (!tag.startsWith("value/")) continue;
@@ -38,13 +38,13 @@ function getValueGroup(frontmatter: any): any | null {
   return null;
 }
 
-function extractLinkpath(value: any): string {
+function extractLinkpath(value: LooseValue): string {
   const text = String(value || "").trim();
   const wikiLink = /^\[\[([^|\]#]+)(?:#[^|\]]*)?(?:\|[^\]]*)?\]\]$/.exec(text);
   return normalizePath((wikiLink ? wikiLink[1] : text).replace(/\.md$/i, ""));
 }
 
-function displayProjectName(file: any, frontmatter: any): string {
+function displayProjectName(file: LooseValue, frontmatter: LooseValue): string {
   if (frontmatter.title) return String(frontmatter.title);
   return String(file.basename || "")
     .replace(/^Project_(?:\d+|long)_/i, "")
@@ -55,7 +55,7 @@ function nodeId(prefix: string, path: string): string {
   return `${prefix}:${normalizePath(path).toLowerCase()}`;
 }
 
-function findAreaFile(app: any, sourceFile: any, linkpath: string, areaByKey: Map<string, any>): any | null {
+function findAreaFile(app: LooseValue, sourceFile: LooseValue, linkpath: string, areaByKey: Map<string, LooseValue>): LooseValue | null {
   const direct = app.metadataCache.getFirstLinkpathDest(linkpath, sourceFile.path);
   if (direct && areaByKey.has(normalizePath(direct.path).toLowerCase())) return direct;
 
@@ -66,7 +66,7 @@ function findAreaFile(app: any, sourceFile: any, linkpath: string, areaByKey: Ma
     || null;
 }
 
-export async function readTechTreeData(app: any, sourcePath: string, options: any = {}) {
+export async function readTechTreeData(app: LooseValue, sourcePath: string, options: LooseValue = {}) {
   const path = normalizePath(sourcePath || DEFAULT_TECH_TREE_SOURCE);
   const areaRoot = normalizePath(options.areaRoot || DEFAULT_AREA_ROOT);
   const legacyActiveProjectRoot = normalizePath(options.activeProjectRoot || DEFAULT_ACTIVE_PROJECT_ROOT);
@@ -81,22 +81,22 @@ export async function readTechTreeData(app: any, sourcePath: string, options: an
   }
 
   const markdownFiles = app.vault.getMarkdownFiles();
-  const areaFiles = markdownFiles.filter((candidate: any) => {
+  const areaFiles = markdownFiles.filter((candidate: LooseValue) => {
     if (!withinFolder(candidate.path, areaRoot)) return false;
     return Boolean(getValueGroup(getFrontmatter(app, candidate)));
   });
 
-  const areaByKey = new Map<string, any>();
+  const areaByKey = new Map<string, LooseValue>();
   for (const areaFile of areaFiles) {
     areaByKey.set(normalizePath(areaFile.path).toLowerCase(), areaFile);
     areaByKey.set(normalizePath(areaFile.path).replace(/\.md$/i, "").toLowerCase(), areaFile);
     areaByKey.set(String(areaFile.basename || "").toLowerCase(), areaFile);
   }
 
-  const nodes: any[] = [];
-  const areaNodeByPath = new Map<string, any>();
+  const nodes: LooseValue[] = [];
+  const areaNodeByPath = new Map<string, LooseValue>();
   const warnings: string[] = [];
-  const discoveredGroups: any[] = [];
+  const discoveredGroups: LooseValue[] = [];
   const groupSet = new Set<string>();
 
   for (const areaFile of areaFiles) {
@@ -125,7 +125,7 @@ export async function readTechTreeData(app: any, sourcePath: string, options: an
     areaNodeByPath.set(normalizePath(areaFile.path).toLowerCase(), node);
   }
 
-  const activeProjectFiles = markdownFiles.filter((candidate: any) => matchesProjectFilter(app, candidate, projectFilter));
+  const activeProjectFiles = markdownFiles.filter((candidate: LooseValue) => matchesProjectFilter(app, candidate, projectFilter));
 
   for (const projectFile of activeProjectFiles) {
     const frontmatter = getFrontmatter(app, projectFile);

@@ -8,10 +8,10 @@ const { normalizePath } = require("obsidian");
  */
 export class SetupWizardModal extends Modal {
 
-  plugin: any;
+  plugin: LooseValue;
   step: number = 1;
   totalSteps: number = 4;
-  config: Record<string, any> = {
+  config: Record<string, LooseValue> = {
     profileName: "My Homepage",
     projectsPath: "",
     areasPath: "",
@@ -21,7 +21,7 @@ export class SetupWizardModal extends Modal {
     enableTechTree: true
   };
 
-  constructor(app: any, plugin: any) { super(app); this.plugin = plugin; }
+  constructor(app: LooseValue, plugin: LooseValue) { super(app); this.plugin = plugin; }
 
   onOpen(): void {
     this.modalEl.addClass("yh-setup-wizard");
@@ -137,9 +137,9 @@ export class SetupWizardModal extends Modal {
 
     if (disabledTypes.length) {
       const keepIds = new Set(
-        data.layout.widgets.filter((w: any) => !disabledTypes.includes(w.type)).map((w: any) => w.id)
+        data.layout.widgets.filter((w: LooseValue) => !disabledTypes.includes(w.type)).map((w: LooseValue) => w.id)
       );
-      data.layout.widgets = data.layout.widgets.filter((w: any) => keepIds.has(w.id));
+      data.layout.widgets = data.layout.widgets.filter((w: LooseValue) => keepIds.has(w.id));
       for (const id of Object.keys(data.widgets)) {
         if (!keepIds.has(id)) delete data.widgets[id];
       }

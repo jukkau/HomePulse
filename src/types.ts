@@ -99,12 +99,12 @@ export type WidgetDefinition = {
   defaultSize: SizePresetName | string;
   defaultConfig: Record<string, unknown>;
   defaultState: Record<string, unknown>;
-  render: (api: Record<string, any>, containerEl: HTMLElement) => void | Promise<void>;
+  render: (api: Record<string, LooseValue>, containerEl: HTMLElement) => void | Promise<void>;
   renderSettings?: (api: {
     app: App;
     containerEl: HTMLElement;
-    draft: Record<string, any>;
-    updateDraft: (patch: Record<string, any>) => void;
+    draft: Record<string, LooseValue>;
+    updateDraft: (patch: Record<string, LooseValue>) => void;
   }) => void;
 };
 

@@ -3,13 +3,13 @@
 
 export const CURRENT_SCHEMA_VERSION = 2;
 
-type MigrationData = Record<string, any>;
+type MigrationData = Record<string, LooseValue>;
 
 /**
  * Run all migrations needed to bring raw plugin data to CURRENT_SCHEMA_VERSION.
  * Does not fill defaults or validate widget payloads — that is validators/normalize.
  */
-export function migrateToLatest(raw: any): MigrationData {
+export function migrateToLatest(raw: LooseValue): MigrationData {
   const base: MigrationData =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? { ...raw }
@@ -94,6 +94,6 @@ function migrateV1ToV2(raw: MigrationData): MigrationData {
   };
 }
 
-function isPlainObject(value: any): boolean {
+function isPlainObject(value: LooseValue): boolean {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
