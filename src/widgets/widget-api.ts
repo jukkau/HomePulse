@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // Widget-facing helpers. Generic value utilities live in ../core/utils and are
 // re-exported here so widgets keep a single import surface.
 

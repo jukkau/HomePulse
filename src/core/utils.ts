@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // Shared value helpers used by both the plugin core and widget definitions.
 // Single source of truth: do not re-declare these in main.ts or widget-api.ts.
 

@@ -1,8 +1,6 @@
 // Migration note: schema migrations for plugin data.json.
 // Current data without schemaVersion is treated as v0.
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 export const CURRENT_SCHEMA_VERSION = 2;
 
 type MigrationData = Record<string, any>;

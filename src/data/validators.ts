@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // Migration note: minimal validation for widget config/state and layout items.
 // Invalid values fall back to defaults; never throw — one bad widget must not crash the homepage.
 

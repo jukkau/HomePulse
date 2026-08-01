@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { DEFAULT_DATA } from "./defaults";
 import { migrateToLatest, CURRENT_SCHEMA_VERSION } from "./migrations";
 import {

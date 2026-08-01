@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { Modal, Setting, Notice } from "obsidian";
 const { normalizePath } = require("obsidian");
 
