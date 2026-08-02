@@ -1,11 +1,11 @@
 ﻿// @ts-nocheck
-import { DEFAULT_ACTIVE_PROJECT_TAGS, DEFAULT_PROJECT_NAME_PREFIXES, DEFAULT_TECH_TREE_SOURCE } from "../constants";
+import { DEFAULT_ACTIVE_PROJECT_TAGS, DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
 import { readProjectFilterConfig, renderProjectFilterSettings } from "../services/project-filter";
 import { readTechTreeData } from "../services/tech-tree-reader";
 import { renderEmpty } from "./widget-api";
 
-import { Setting, normalizePath } from "obsidian";
+import { Setting } from "obsidian";
 
 const TREE_KINDS = new Set(["area", "moc", "project"]);
 const DEFAULT_TECH_TREE_PROJECT_FOLDERS = ["10_Projects/进行中"];
@@ -44,7 +44,6 @@ export const techTreeWidget = {
   defaultSize: { preset: "W4H1", w: 4, h: 1 },
   defaultConfig: {
     title: "tech tree",
-    sourcePath: "",
     areaRoot: "",
     projectFolders: DEFAULT_TECH_TREE_PROJECT_FOLDERS,
     projectTags: DEFAULT_ACTIVE_PROJECT_TAGS,
@@ -55,14 +54,13 @@ export const techTreeWidget = {
   async render(container, api) {
     const config = api.widgetData.config;
     const defaults = api.snapshot.techTreeSettings;
-    const sourcePath = normalizePath(config.sourcePath || defaults.source || DEFAULT_TECH_TREE_SOURCE);
     const areaRoot = config.areaRoot || defaults.areaRoot;
     const projectFilter = readProjectFilterConfig(config, {
       folders: DEFAULT_TECH_TREE_PROJECT_FOLDERS,
       tags: DEFAULT_ACTIVE_PROJECT_TAGS,
       namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
     });
-    const data = await readTechTreeData(api.app, sourcePath, {
+    const data = await readTechTreeData(api.app, {
       areaRoot,
       projectFolders: projectFilter.folders,
       projectTags: projectFilter.tags,
@@ -72,11 +70,6 @@ export const techTreeWidget = {
       renderEmpty(container, data && data.error ? data.error : "No tech tree data available.");
       return;
     }
-
-    const meta = container.createDiv({ cls: "yh-tech-meta", text: data.file.basename });
-    meta.addEventListener("click", async () => {
-      await api.openPath(data.file.path);
-    });
 
     const nodes = data.nodes.filter((node) => TREE_KINDS.has(String(node.kind || "").toLowerCase()));
     const nodeMap = new Map(nodes.map((node) => [node.id, node]));
@@ -120,12 +113,6 @@ export const techTreeWidget = {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
-      });
-    });
-    new Setting(container).setName("Source file").setDesc("Optional. Leave blank to use the global setting.").addText((text) => {
-      text.setValue(draft.sourcePath || "");
-      text.onChange((value) => {
-        draft.sourcePath = value.trim();
       });
     });
     new Setting(container).setName("Area folder").setDesc("Optional. Overrides the global Area folder for this widget.").addText((text) => {

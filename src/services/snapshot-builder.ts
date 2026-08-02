@@ -1,4 +1,3 @@
-import { DEFAULT_TECH_TREE_SOURCE } from "../constants";
 import { readTechTreeData } from "./tech-tree-reader";
 import { calculateObsidianUsageDays } from "./obsidian-usage";
 import { normalizeArray } from "../core/utils";
@@ -58,7 +57,7 @@ export class SnapshotBuilder {
   notesThisWeek: number;
   notesDailyLast7: number[];
   updatedAreasThisWeek: number;
-  techTreeSettings: { source: string; areaRoot: string; activeProjectRoot: string };
+  techTreeSettings: { areaRoot: string; activeProjectRoot: string };
 
   constructor(app: LooseValue, plugin: LooseValue) {
     this.app = app;
@@ -84,7 +83,7 @@ export class SnapshotBuilder {
     this.notesThisWeek = 0;
     this.notesDailyLast7 = [];
     this.updatedAreasThisWeek = 0;
-    this.techTreeSettings = { source: "", areaRoot: "", activeProjectRoot: "" };
+    this.techTreeSettings = { areaRoot: "", activeProjectRoot: "" };
   }
 
   async load(): Promise<this> {
@@ -102,7 +101,6 @@ export class SnapshotBuilder {
   computeWidgetAggregates(): void {
     const settings = this.plugin.data.settings;
     this.techTreeSettings = {
-      source: settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE,
       areaRoot: settings.techTreeAreaRoot,
       activeProjectRoot: settings.techTreeActiveProjectRoot
     };
@@ -247,7 +245,6 @@ export class SnapshotBuilder {
   async loadTechTree(): Promise<void> {
     this.techTree = await readTechTreeData(
       this.app,
-      this.plugin.data.settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE,
       {
         areaRoot: this.plugin.data.settings.techTreeAreaRoot,
         activeProjectRoot: this.plugin.data.settings.techTreeActiveProjectRoot
