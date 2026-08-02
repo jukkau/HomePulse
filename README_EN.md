@@ -1,132 +1,97 @@
 # HomePulse
 
 <p align="center">
-  <a href="./README.md">中文</a> · <strong>English</strong>
+  <a href="https://github.com/jukkau/HomePulse/blob/main/README.md">中文</a> · <strong>English</strong>
 </p>
-
-HomePulse is a local-first Obsidian homepage plugin that brings focus, time flow, execution pulse, knowledge profile, activity heatmap, and a capability map into one cohesive dashboard. It uses a draggable grid layout with responsive compact reflow for both 14-inch laptops and widescreen displays.
 
 ![Homepage](docs/images/homepage.png)
 
 ## Who It Is For
 
-HomePulse is for users who want Obsidian to act as a personal knowledge execution system: not only showing information, but also helping you see what you are moving forward, where your time goes, and which projects and capabilities are forming.
+HomePulse is for users who want Obsidian to serve as a personal knowledge execution system: not only displaying information, but also showing what is moving forward, where time is going, and which projects and capabilities are taking shape.
 
-## Features
+## Main Features
 
-- **Editable Grid Layout**: Drag, resize, and arrange widgets in a responsive multi-column grid.
-- **Named Layout Presets**: Save different homepage layouts, name them, set their column count, and switch between devices or work modes.
-- **Header Settings**: Configure homepage identity, lock behavior, Obsidian start date, and theme accent color from the homepage toolbar.
-- **Homepage View**: Register a custom Obsidian view as your homepage, pin it as a persistent tab, and auto-open on startup.
-- **First-Run Setup Wizard**: Configure homepage name, project folder, area folder, and widget toggles on first launch.
-- **Local First**: Core data comes from local Markdown, frontmatter, task checkboxes, file modification times, and the plugin data file.
+- **First-run setup wizard**: Configure the homepage name, project folder, Area folder, and default widgets on first launch.
+- **Homepage view**: Use a dedicated Obsidian view that can be pinned as a homepage tab and opened automatically on startup.
+- **Local first**: Core data comes from local Markdown, frontmatter, task checkboxes, file modification times, and the plugin data file.
+- **Editable grid layout**: Drag, resize, and arrange widgets in multiple columns. The layout compacts automatically for narrower screens while editing retains the configured column count.
+
+The homepage editing toolbar includes:
+
+- **Header settings**: Configure the username, signature, homepage lock, Obsidian start date, and theme accent color
+- **Add widget**: Add widgets
+- **Manage layouts**: Save, load, and delete named layouts, set their column counts, and switch between device or usage scenarios
 
 ## Widgets
 
 | Widget | Description |
 |---|---|
-| **Focus / Today's goal** | Daily focus / intention input |
-| **Projects** | Active projects from configurable folders, tags, and filename prefixes |
-| **Tasks** | Aggregated tasks from vault Markdown files |
-| **Calendar** | Inline calendar view |
-| **Habits** | Habit tracker with streak visualization |
-| **Pomodoro** | Built-in pomodoro timer with Project, Area, Task Pool, or Quick target attribution and a local TimeLog |
+| **Today's goal** | Daily focus input |
+| **Projects** | Active projects from configured folders, tags, and filename prefixes |
+| **Tasks** | Tasks aggregated from Markdown checkboxes |
+| **Calendar** | Built-in calendar view |
+| **Habits** | Habit tracking with streak display |
+| **Pomodoro** | Pomodoro timer with Project, Area, Task Pool, or Quick target attribution and local TimeLog storage |
 | **Music Player** | Opens a configured music service login or playback page |
-| **Bookmarks** | Configurable URL bookmarks using `label|url` entries or direct URL lines |
-| **System** | Configurable commands and daily-note shortcuts |
-| **Activity History** | Activity heatmap from vault file modification timestamps |
-| **Tech Tree** | Capability map generated from Value -> Area -> Project relationships |
-| **Execution Pulse** | Recent personal-system running status across habits, focus, knowledge growth, and tasks |
-| **Knowledge Profile** | Knowledge asset totals for notes, Areas, projects, and tags |
-| **Recent Notes** | Recently updated notes from the vault |
+| **Bookmarks** | Quick bookmarks using `label\|url` entries or direct URL lines |
+| **System** | Commands and Daily Note shortcuts |
+| **Activity History** | Activity heatmap based on vault file modification times |
+| **Tech Tree** | Capability map based on Value → Area → Project relationships |
+| **Execution Pulse** | Recent execution status across habits, Focus, knowledge growth, and tasks |
+| **Knowledge Profile** | Overview of notes, Areas, projects, tags, and other knowledge assets |
+| **Recent Notes** | Recently updated notes |
 
 ## Time Flow
 
-HomePulse includes a local TimeLog layer for tracking focused time without external services.
+HomePulse includes a local TimeLog layer that does not depend on external services.
 
-- Pomodoro sessions can be assigned to a Project, Area, Task Pool, or Quick target.
-- Manual time entries can be recorded from the Pomodoro widget.
-- Recent TimeLog entries can be reviewed and deleted from the Pomodoro log button.
-- Execution Pulse uses TimeLog aggregation for the Focus metric when time records are available.
+- Completed Pomodoro focus time can be attributed to a Project, Area, Task Pool, or Quick target.
+- Time can be entered manually from the Pomodoro widget.
+- Recent TimeLog entries can be reviewed and deleted.
+- When TimeLog data exists, Execution Pulse uses aggregated time for its Focus metric.
 - Activity History remains a file-activity heatmap and does not manage TimeLog records.
-
-## Default Layout
-
-The default homepage layout includes:
-
-- **Today's goal**, **Knowledge Profile**, and **Music Player**
-- **Habits**, **Pomodoro**, **Tasks**, and **Calendar**
-- **Execution Pulse** and **Bookmarks**
-- **Tech Tree**, **Projects**, **Recent Notes**, and **System**
-- **Activity History**
-
-The editing toolbar includes:
-
-- **Header settings**: Configure homepage identity, lock behavior, start date, and theme color
-- **Add widget**: Add widgets
-- **Manage layouts**: Save, load, and delete named layouts and set layout columns
 
 ## Dependencies and Privacy
 
-HomePulse is self-contained and does not require any community plugin. Dashboard data is read directly from your local Markdown files, including task checkboxes, frontmatter metadata, and file timestamps.
+HomePulse does not require other Obsidian community plugins. Dashboard data is read primarily from local Markdown files, frontmatter, task checkboxes, and file modification times.
 
 | Plugin | Requirement | When it is used |
 |---|---|---|
-| **Daily Notes** | Optional core plugin | Required only when a System item uses the `daily-note` action. Without it, only that button is unavailable. |
-| **QuickAdd** | Optional community plugin | Required only when a button in the System widget is configured to run a QuickAdd command such as `quickadd:runQuickAdd`. Other System buttons do not depend on QuickAdd. |
-| **cMenu** | Not required | HomePulse does not depend on cMenu. Even when a System button runs a QuickAdd command, only QuickAdd is required. |
-
-- Core dashboard data stays local and no files are uploaded.
-- Optional bookmark favicons and external music links may contact the configured third-party service only when you enable or open them.
-- File scanning is limited to generating dashboard data, including projects, tasks, capability map, activity heatmap, and Time Flow targets.
-- TimeLog records are stored locally in the plugin data file.
-- `data.json` stores personal dashboard configuration, habit records, time logs, and vault paths. It is excluded from version control via `.gitignore`.
+| **Daily Notes** | Optional core plugin | Needed only when a System item uses the `daily-note` action; without it, only that button is unavailable. |
+| **QuickAdd** | Optional community plugin | Needed only when a System widget button is configured to run a QuickAdd command. |
+| **cMenu** | Not required | HomePulse does not depend on cMenu. |
 
 ## Installation
 
 ### From Obsidian Community Plugins
 
-1. Open Obsidian -> Settings -> Community Plugins
-2. Search for "HomePulse"
-3. Install and enable
+1. Open Obsidian → Settings → Community plugins
+2. Search for **HomePulse**
+3. Install and enable it
 
 ### Manual Installation
 
-Copy this directory into your vault:
+Place the plugin files in:
 
 ```text
 .obsidian/plugins/homepulse/
 ```
 
-Then enable **HomePulse** in Settings -> Community Plugins.
+Then enable **HomePulse** under Settings → Community plugins.
 
 ## Configuration
 
-Plugin settings allow you to customize:
-
-- Homepage Name / Username
-- Project Folder
-- Area Folder
-- Time Flow Sources
-- Tech Tree Source
-- Activity History Source
-- Music Player URL
-- Bookmarks
-- System Actions
-- Widget Toggles
-- Layout Presets
-- Theme Color
-
 ### Tech Tree Metadata
 
-Area notes are discovered from the configured Area folder. Every note with a `value/*` tag is included; `type: area` is optional:
+Area notes are discovered from the configured Area folder. Notes with a `value/*` tag are included in the capability map; `type: area` is optional:
 
 ```yaml
 tags:
   - value/understanding-the-world
 ```
 
-Projects link to Areas via frontmatter:
+Projects link to Areas through frontmatter:
 
 ```yaml
 area:
@@ -138,11 +103,11 @@ Daily notes, task files, and single-output notes are excluded from the capabilit
 
 ### Time Flow Targets
 
-- Project targets come from project notes and use the project title as the stable target id.
-- If a project note links to an Area in frontmatter, the time record can be aggregated into that Area.
+- Project targets come from project notes and use the project title as a stable target id.
+- If a project note links to an Area in frontmatter, its time records can be aggregated into that Area.
 - Area targets come from Area notes.
-- Task Pool targets point to a configured Markdown file and are used for loose task-count context, not individual checkbox-level tracking.
-- Quick targets can be entered directly when a time entry does not belong to a known Project, Area, or Task Pool.
+- Task Pool targets point to a configured Markdown file and provide loose task-pool context rather than tracking individual checkboxes.
+- Quick targets can be entered directly for time that does not belong to a known Project, Area, or Task Pool.
 
 ## Development
 
@@ -156,21 +121,19 @@ npm run build      # production build
 
 ## Credits
 
-- Visual design inspired by **Dashboard-Komorebi.css** (Komorebi / Catppuccin style) by **InlitX**. See [docs/UI-Credits.md](docs/UI-Credits.md) for full attribution.
+- Visual design inspired by **Dashboard-Komorebi.css** (Komorebi / Catppuccin style) by **InlitX**. See [UI Credits](docs/UI-Credits.md) for full attribution.
 
 ## Roadmap
 
-- [x] Grid layout with drag & resize
+- [x] Draggable, resizable grid layout
 - [x] Widget system (Focus, Projects, Tasks, Calendar, Habits, Pomodoro, Music Player, Bookmarks, System, Activity History, Tech Tree, Execution Pulse, Knowledge Profile, Recent Notes)
 - [x] First-run setup wizard
-- [x] TypeScript strict mode
-- [x] GitHub Actions release workflow with artifact attestation
-- [x] Time Flow MVP with Pomodoro attribution, manual records, and local log deletion
+- [x] Time Flow MVP with Pomodoro attribution, manual entries, and local log deletion
 - [x] Custom theme colors
 - [ ] Light and dark display mode configuration
 - [ ] Chinese and English interface switching (the current interface is primarily English)
-- [ ] Widget configuration enhancements
-- [ ] Capability Growth from aggregated time records
+- [ ] Enhanced widget configuration
+- [ ] Capability Growth based on aggregated time records
 
 ## License
 

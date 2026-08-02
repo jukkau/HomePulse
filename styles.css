@@ -1223,8 +1223,7 @@
 
 .yh-list-meta,
 .yh-task-file,
-.yh-tech-node-meta,
-.yh-tech-meta {
+.yh-tech-node-meta {
   color: var(--komo-muted);
   font-size: 0.66rem;
 }
@@ -2849,17 +2848,6 @@
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
-}
-
-.yh-tech-meta {
-  display: inline-flex;
-  align-self: flex-start;
-  margin-bottom: 6px;
-  padding: 2px 8px;
-  border-radius: var(--komo-radius);
-  background: var(--komo-overlay);
-  border: 1px solid var(--komo-border);
-  cursor: pointer;
 }
 
 .yh-widget-tech-tree .yh-card-body {

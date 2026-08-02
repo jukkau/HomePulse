@@ -2,7 +2,6 @@ export const VIEW_TYPE = "homepulse-view";
 export const VIEW_NAME = "HomePulse";
 export const VIEW_ICON = "home";
 
-export const DEFAULT_TECH_TREE_SOURCE = "99_Meta_System/\u80fd\u529b\u5730\u56fe.md";
 export const PROJECT_ROOT = "10_Projects";
 export const DEFAULT_PROJECT_NAME_PREFIXES = ["Project_"];
 export const DEFAULT_ACTIVE_PROJECT_TAGS = ["type/project", "status/ing"];

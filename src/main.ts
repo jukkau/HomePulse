@@ -2,7 +2,6 @@
 // Migration note: this file is the current published main.js moved under src/.
 // Re-enable type checking module by module as responsibilities are split out.
 import {
-  DEFAULT_TECH_TREE_SOURCE,
   VIEW_ICON,
   VIEW_NAME,
   VIEW_TYPE
@@ -567,19 +566,6 @@ class YukiHomepageSettingTab extends PluginSettingTab {
         this.plugin.refreshOpenViews();
       });
     });
-
-    new Setting(containerEl)
-      .setName("Tech tree source")
-      .setDesc("Metadata note for the automatic Value → Area → active Project tree.")
-      .addText((text) => {
-        text.setPlaceholder(DEFAULT_TECH_TREE_SOURCE);
-        text.setValue(this.plugin.data.settings.techTreeSource || DEFAULT_TECH_TREE_SOURCE);
-        text.onChange(async (value) => {
-          this.plugin.data.settings.techTreeSource = value.trim() || DEFAULT_TECH_TREE_SOURCE;
-          await this.plugin.persist();
-          this.plugin.refreshOpenViews();
-        });
-      });
 
     new Setting(containerEl)
       .setName("Tech tree Area folder")

@@ -209,7 +209,6 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
 
     case "tech-tree":
       next.title = asString(raw.title, base.title || "tech tree");
-      next.sourcePath = asString(raw.sourcePath, base.sourcePath || "").trim();
       next.areaRoot = asString(raw.areaRoot, base.areaRoot || "").trim();
       next.projectFolders = asStringArray(raw.projectFolders ?? raw.activeProjectRoot, base.projectFolders || []);
       next.projectTags = asStringArray(raw.projectTags, base.projectTags || DEFAULT_ACTIVE_PROJECT_TAGS);
@@ -217,6 +216,7 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
         raw.projectNamePrefixes,
         base.projectNamePrefixes || DEFAULT_PROJECT_NAME_PREFIXES
       );
+      delete next.sourcePath;
       delete next.activeProjectRoot;
       break;
 
@@ -318,7 +318,6 @@ export function validateSettings(settings: LooseValue, defaults: LooseValue): Lo
     obsidianStartDate: /^\d{4}-\d{2}-\d{2}$/.test(asString(raw.obsidianStartDate))
       ? asString(raw.obsidianStartDate)
       : asString(base.obsidianStartDate, ""),
-    techTreeSource: asString(raw.techTreeSource, base.techTreeSource || ""),
     techTreeAreaRoot: asString(raw.techTreeAreaRoot, base.techTreeAreaRoot || "20_Areas"),
     techTreeActiveProjectRoot: asString(raw.techTreeActiveProjectRoot, base.techTreeActiveProjectRoot || "10_Projects/进行中")
   };

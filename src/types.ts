@@ -23,7 +23,6 @@ export type HomepageSettings = {
   profileName: string;
   profileSignature: string;
   obsidianStartDate: string;
-  techTreeSource: string;
   techTreeAreaRoot: string;
   techTreeActiveProjectRoot: string;
 };

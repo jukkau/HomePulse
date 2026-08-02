@@ -26,7 +26,6 @@ export const DEFAULT_DATA = {
     profileName: "My Homepage",
     profileSignature: "",
     obsidianStartDate: "",
-    techTreeSource: "",
     techTreeAreaRoot: "20_Areas",
     techTreeActiveProjectRoot: "Projects"
   },
@@ -189,7 +188,7 @@ export const DEFAULT_DATA = {
       },
       state: {}
     },
-    "tech-tree-main": { config: { title: "tech tree", sourcePath: "", areaRoot: "", projectFolders: ["10_Projects/进行中"], projectTags: ["type/project", "status/ing"], projectNamePrefixes: ["Project_"] },
+    "tech-tree-main": { config: { title: "tech tree", areaRoot: "", projectFolders: ["10_Projects/进行中"], projectTags: ["type/project", "status/ing"], projectNamePrefixes: ["Project_"] },
       state: {}
     },
     "activity-main": {

@@ -1,10 +1,7 @@
-import { DEFAULT_PROJECT_NAME_PREFIXES, DEFAULT_TECH_TREE_SOURCE } from "../constants";
+import { DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
 import { matchesProjectFilter, readProjectFilterConfig } from "./project-filter";
 
-const {
-  TFile,
-  normalizePath
-} = require("obsidian");
+const { normalizePath } = require("obsidian");
 
 const DEFAULT_AREA_ROOT = "20_Areas";
 const DEFAULT_ACTIVE_PROJECT_ROOT = "10_Projects/进行中";
@@ -66,8 +63,7 @@ function findAreaFile(app: LooseValue, sourceFile: LooseValue, linkpath: string,
     || null;
 }
 
-export async function readTechTreeData(app: LooseValue, sourcePath: string, options: LooseValue = {}) {
-  const path = normalizePath(sourcePath || DEFAULT_TECH_TREE_SOURCE);
+export async function readTechTreeData(app: LooseValue, options: LooseValue = {}) {
   const areaRoot = normalizePath(options.areaRoot || DEFAULT_AREA_ROOT);
   const legacyActiveProjectRoot = normalizePath(options.activeProjectRoot || DEFAULT_ACTIVE_PROJECT_ROOT);
   const projectFilter = readProjectFilterConfig({
@@ -75,11 +71,6 @@ export async function readTechTreeData(app: LooseValue, sourcePath: string, opti
     projectTags: options.projectTags ?? [],
     projectNamePrefixes: options.projectNamePrefixes ?? DEFAULT_PROJECT_NAME_PREFIXES
   });
-  const file = app.vault.getAbstractFileByPath(path);
-  if (!(file instanceof TFile)) {
-    return { error: `Tech tree source is missing: ${path}` };
-  }
-
   const markdownFiles = app.vault.getMarkdownFiles();
   const areaFiles = markdownFiles.filter((candidate: LooseValue) => {
     if (!withinFolder(candidate.path, areaRoot)) return false;
@@ -166,5 +157,5 @@ export async function readTechTreeData(app: LooseValue, sourcePath: string, opti
       || String(a.title || "").localeCompare(String(b.title || ""), "zh-CN");
   });
 
-  return { file, groups: discoveredGroups, nodes, warnings };
+  return { groups: discoveredGroups, nodes, warnings };
 }
