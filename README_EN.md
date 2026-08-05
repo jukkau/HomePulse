@@ -8,13 +8,9 @@
 
 **Turn your Obsidian homepage into a chain: Direction → Action → Investment → Accumulation → Capability.**
 
-Most homepage plugins are aggregators: they pile calendars, tasks, and recent files onto one screen. HomePulse goes further — beyond displaying information, it helps you see: **what is moving forward, where your time is going, and which projects and capabilities are taking shape.**
+It helps you see: **what is moving forward, where your time is going, and which projects and capabilities are taking shape.**
 
 It connects your notes, tasks, focus time, and capability map, so the first thing you see when you open Obsidian is what actually matters.
-
-## Who It Is For
-
-If you have years of notes in Obsidian but still struggle to recall what you are actually pushing forward; if you have tried calendars, tasks, or pomodoros but their records stay disconnected and never add up to a bigger picture — HomePulse is for you.
 
 ## Main Features
 
