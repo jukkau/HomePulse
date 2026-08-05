@@ -1,20 +1,26 @@
 # HomePulse
 
 <p align="center">
-  <a href="https://github.com/jukkau/HomePulse/blob/main/README.md">中文</a> · <strong>English</strong>
+  <strong>English</strong> · <a href="https://github.com/jukkau/HomePulse/blob/main/README.md">中文</a>
 </p>
 
 ![Homepage](docs/images/homepage.png)
 
+**Turn your Obsidian homepage into a chain: Direction → Action → Investment → Accumulation → Capability.**
+
+Most homepage plugins are aggregators: they pile calendars, tasks, and recent files onto one screen. HomePulse goes further — beyond displaying information, it helps you see: **what is moving forward, where your time is going, and which projects and capabilities are taking shape.**
+
+It connects your notes, tasks, focus time, and capability map, so the first thing you see when you open Obsidian is what actually matters.
+
 ## Who It Is For
 
-HomePulse is for users who want Obsidian to serve as a personal knowledge execution system: not only displaying information, but also showing what is moving forward, where time is going, and which projects and capabilities are taking shape.
+If you have years of notes in Obsidian but still struggle to recall what you are actually pushing forward; if you have tried calendars, tasks, or pomodoros but their records stay disconnected and never add up to a bigger picture — HomePulse is for you.
 
 ## Main Features
 
-- **First-run setup wizard**: Configure the homepage name, project folder, Area folder, and default widgets on first launch.
+- **First-run setup wizard**: Configure the homepage name, project folder, Area folder, and default widgets on first launch — get up and running in minutes.
 - **Homepage view**: Use a dedicated Obsidian view that can be pinned as a homepage tab and opened automatically on startup.
-- **Local first**: Core data comes from local Markdown, frontmatter, task checkboxes, file modification times, and the plugin data file.
+- **Local first**: Core data comes from local Markdown, frontmatter, task checkboxes, file modification times, and the plugin data file. Nothing is uploaded anywhere.
 - **Editable grid layout**: Drag, resize, and arrange widgets in multiple columns. The layout compacts automatically for narrower screens while editing retains the configured column count.
 
 The homepage editing toolbar includes:
@@ -27,20 +33,38 @@ The homepage editing toolbar includes:
 
 | Widget | Description |
 |---|---|
-| **Today's goal** | Daily focus input |
+| **Today's goal** | Daily focus input — write one thing you want to move forward at the start of the day |
 | **Projects** | Active projects from configured folders, tags, and filename prefixes |
 | **Tasks** | Tasks aggregated from Markdown checkboxes |
 | **Calendar** | Built-in calendar view |
 | **Habits** | Habit tracking with streak display |
-| **Pomodoro** | Pomodoro timer with Project, Area, Task Pool, or Quick target attribution and local TimeLog storage |
+| **Pomodoro** | Pomodoro timer that attributes focus time to a Project, Area, Task Pool, or Quick target and stores it in the local TimeLog |
 | **Music Player** | Opens a configured music service login or playback page |
 | **Bookmarks** | Quick bookmarks using `label\|url` entries or direct URL lines |
 | **System** | Commands and Daily Note shortcuts |
 | **Activity History** | Activity heatmap based on vault file modification times |
-| **Tech Tree** | Capability map based on Value → Area → Project relationships |
+| **Tech Tree** | Capability map auto-generated from Value → Area → Project relationships, with no separate metadata file to maintain |
 | **Execution Pulse** | Recent execution status across habits, Focus, knowledge growth, and tasks |
 | **Knowledge Profile** | Overview of notes, Areas, projects, tags, and other knowledge assets |
 | **Recent Notes** | Recently updated notes |
+
+## Installation
+
+### From Obsidian Community Plugins
+
+1. Open Obsidian → Settings → Community plugins
+2. Search for **HomePulse**
+3. Install and enable it
+
+### Manual Installation
+
+Place the plugin files in:
+
+```text
+.obsidian/plugins/homepulse/
+```
+
+Then enable **HomePulse** under Settings → Community plugins.
 
 ## Time Flow
 
@@ -61,24 +85,6 @@ HomePulse does not require other Obsidian community plugins. Dashboard data is r
 | **Daily Notes** | Optional core plugin | Needed only when a System item uses the `daily-note` action; without it, only that button is unavailable. |
 | **QuickAdd** | Optional community plugin | Needed only when a System widget button is configured to run a QuickAdd command. |
 | **cMenu** | Not required | HomePulse does not depend on cMenu. |
-
-## Installation
-
-### From Obsidian Community Plugins
-
-1. Open Obsidian → Settings → Community plugins
-2. Search for **HomePulse**
-3. Install and enable it
-
-### Manual Installation
-
-Place the plugin files in:
-
-```text
-.obsidian/plugins/homepulse/
-```
-
-Then enable **HomePulse** under Settings → Community plugins.
 
 ## Configuration
 
