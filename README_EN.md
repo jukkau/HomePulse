@@ -1,7 +1,7 @@
 # HomePulse
 
 <p align="center">
-  <strong>English</strong> · <a href="https://github.com/jukkau/HomePulse/blob/main/README.md">中文</a>
+  <strong>English</strong> · <a href="https://github.com/jukkau/HomePulse/blob/main/README_ZH.md">中文</a>
 </p>
 
 ![Homepage](docs/images/homepage.png)
@@ -12,12 +12,20 @@ It helps you see: **what is moving forward, where your time is going, and which 
 
 It connects your notes, tasks, focus time, and capability map, so the first thing you see when you open Obsidian is what actually matters.
 
+## Theme support
+
+HomePulse supports both dark and light Obsidian themes. It follows the theme background, text hierarchy, and accent color, while still allowing an optional custom accent color. The preview below shows the homepage across multiple dark and light themes.
+
+![Dark and light theme support](docs/images/theme-support.png)
+
 ## Main Features
 
 - **First-run setup wizard**: Configure the homepage name, project folder, Area folder, and default widgets on first launch — get up and running in minutes.
 - **Homepage view**: Use a dedicated Obsidian view that can be pinned as a homepage tab and opened automatically on startup.
 - **Local first**: Core data comes from local Markdown, frontmatter, task checkboxes, file modification times, and the plugin data file. Nothing is uploaded anywhere.
 - **Editable grid layout**: Drag, resize, and arrange widgets in multiple columns. The layout compacts automatically for narrower screens while editing retains the configured column count.
+- **English and Chinese UI**: Switch between English and Simplified Chinese in HomePulse settings. The homepage, widgets, modals, settings pages, and first-run wizard update immediately.
+- **Theme-aware surfaces**: Supports both dark and light Obsidian themes, following their background and accent colors by default, with an optional custom accent color.
 
 The homepage editing toolbar includes:
 
@@ -84,6 +92,15 @@ HomePulse does not require other Obsidian community plugins. Dashboard data is r
 
 ## Configuration
 
+### Path Configuration
+
+The Project folder and Area folder from the first-run setup wizard are used as global defaults.
+
+- Projects, Tasks, Knowledge Profile, and Pomodoro project targets inherit the setup Project folder when their widget-level folder setting is left blank.
+- Tech Tree inherits the global Area / Project settings when its widget-level paths are left blank.
+- Paths can be vault-relative, such as `Projects`, or absolute paths inside the current vault, such as `D:/Vault/Projects`.
+- The Task Pool file also supports either a vault-relative path or an absolute file path inside the current vault.
+
 ### Tech Tree Metadata
 
 Area notes are discovered from the configured Area folder. Notes with a `value/*` tag are included in the capability map; `type: area` is optional:
@@ -132,8 +149,8 @@ npm run build      # production build
 - [x] First-run setup wizard
 - [x] Time Flow MVP with Pomodoro attribution, manual entries, and local log deletion
 - [x] Custom theme colors
-- [ ] Light and dark display mode configuration
-- [ ] Chinese and English interface switching (the current interface is primarily English)
+- [x] Obsidian dark / light theme background and accent adaptation
+- [x] Full English and Chinese interface switching, with English as the default
 - [ ] Enhanced widget configuration
 - [ ] Capability Growth based on aggregated time records
 

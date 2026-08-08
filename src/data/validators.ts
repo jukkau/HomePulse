@@ -104,11 +104,11 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
       next.projectFolders = asStringArray(raw.projectFolders, base.projectFolders || []);
       next.projectTags = asStringArray(raw.projectTags, base.projectTags || ["type/project"]);
       next.projectNamePrefixes = asStringArray(raw.projectNamePrefixes, base.projectNamePrefixes || ["Project_"]);
-      next.areaFolders = asStringArray(raw.areaFolders, base.areaFolders || ["20_Areas"]);
+      next.areaFolders = asStringArray(raw.areaFolders, base.areaFolders || ["Areas"]);
       next.areaTags = asStringArray(raw.areaTags, base.areaTags || []);
       next.areaNamePrefixes = asStringArray(raw.areaNamePrefixes, base.areaNamePrefixes || ["Area_"]);
-      next.taskFile = asString(raw.taskFile, base.taskFile || "10_Projects/进行中/QuickCapture.md").trim()
-        || "10_Projects/进行中/QuickCapture.md";
+      next.taskFile = asString(raw.taskFile, base.taskFile || "QuickCapture.md").trim()
+        || "QuickCapture.md";
       break;
 
     case "music-player":
@@ -307,19 +307,25 @@ export function validateWidgetStoredData(type: string, stored: LooseValue, defin
 export function validateSettings(settings: LooseValue, defaults: LooseValue): LooseValue {
   const base = asPlainObject(defaults, {});
   const raw = asPlainObject(settings, {});
+  const rawAccent = asString(raw.accentColor, "");
+  const explicitMode = raw.accentColorMode === "custom" || raw.accentColorMode === "theme"
+    ? raw.accentColorMode
+    : null;
+  const accentColorMode = explicitMode || (HEX_COLOR.test(rawAccent) && rawAccent.toLowerCase() !== "#f5c2e7" ? "custom" : "theme");
   return {
     openOnStartup: typeof raw.openOnStartup === "boolean" ? raw.openOnStartup : Boolean(base.openOnStartup),
     lockHomepage: typeof raw.lockHomepage === "boolean" ? raw.lockHomepage : Boolean(base.lockHomepage),
-    language: "en",
+    language: raw.language === "zh-CN" || raw.language === "en" ? raw.language : "en",
     themePreset: asString(raw.themePreset, base.themePreset || "petal"),
-    accentColor: HEX_COLOR.test(asString(raw.accentColor, "")) ? asString(raw.accentColor) : asString(base.accentColor, "#f5c2e7"),
+    accentColorMode,
+    accentColor: HEX_COLOR.test(rawAccent) ? rawAccent : rawAccent ? asString(base.accentColor, "") : "",
     profileName: asString(raw.profileName, base.profileName || "Your name"),
     profileSignature: asString(raw.profileSignature, base.profileSignature || "A personal Obsidian homepage"),
     obsidianStartDate: /^\d{4}-\d{2}-\d{2}$/.test(asString(raw.obsidianStartDate))
       ? asString(raw.obsidianStartDate)
       : asString(base.obsidianStartDate, ""),
-    techTreeAreaRoot: asString(raw.techTreeAreaRoot, base.techTreeAreaRoot || "20_Areas"),
-    techTreeActiveProjectRoot: asString(raw.techTreeActiveProjectRoot, base.techTreeActiveProjectRoot || "10_Projects/进行中")
+    techTreeAreaRoot: asString(raw.techTreeAreaRoot, base.techTreeAreaRoot || "Areas"),
+    techTreeActiveProjectRoot: asString(raw.techTreeActiveProjectRoot, base.techTreeActiveProjectRoot || "Projects")
   };
 }
 

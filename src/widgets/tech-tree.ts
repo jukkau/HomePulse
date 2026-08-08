@@ -1,6 +1,7 @@
 ﻿// @ts-nocheck
 import { DEFAULT_ACTIVE_PROJECT_TAGS, DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { t } from "../i18n";
 import { readProjectFilterConfig, renderProjectFilterSettings } from "../services/project-filter";
 import { readTechTreeData } from "../services/tech-tree-reader";
 import { renderEmpty } from "./widget-api";
@@ -8,7 +9,16 @@ import { renderEmpty } from "./widget-api";
 import { Setting } from "obsidian";
 
 const TREE_KINDS = new Set(["area", "moc", "project"]);
-const DEFAULT_TECH_TREE_PROJECT_FOLDERS = ["10_Projects/进行中"];
+const DEFAULT_TECH_TREE_PROJECT_FOLDERS: string[] = [];
+
+export function resolveTechTreeProjectFolders(config, inheritedFolder = "") {
+  const configured = Array.isArray(config?.projectFolders)
+    ? config.projectFolders.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+  if (configured.length) return configured;
+  const inherited = String(inheritedFolder || "").trim();
+  return inherited ? [inherited] : [];
+}
 
 function renderNode(container, node, childrenByParent, api, ancestry = new Set()) {
   const subtree = container.createDiv({ cls: `yh-tech-subtree yh-tech-subtree-${node.kind}` });
@@ -55,8 +65,12 @@ export const techTreeWidget = {
     const config = api.widgetData.config;
     const defaults = api.snapshot.techTreeSettings;
     const areaRoot = config.areaRoot || defaults.areaRoot;
-    const projectFilter = readProjectFilterConfig(config, {
-      folders: DEFAULT_TECH_TREE_PROJECT_FOLDERS,
+    const inheritedFolder = String(defaults.activeProjectRoot || "").trim();
+    const projectFilter = readProjectFilterConfig({
+      ...config,
+      projectFolders: resolveTechTreeProjectFolders(config, inheritedFolder)
+    }, {
+      folders: [],
       tags: DEFAULT_ACTIVE_PROJECT_TAGS,
       namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
     });
@@ -67,7 +81,7 @@ export const techTreeWidget = {
       projectNamePrefixes: projectFilter.namePrefixes
     });
     if (!data || data.error) {
-      renderEmpty(container, data && data.error ? data.error : "No tech tree data available.");
+      renderEmpty(container, data && data.error ? data.error : t(api.language, "noTechTree"));
       return;
     }
 
@@ -108,23 +122,26 @@ export const techTreeWidget = {
       }
     }
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Area folder").setDesc("Optional. Overrides the global Area folder for this widget.").addText((text) => {
+    new Setting(container).setName(t(ctx.language, "areaFolder")).setDesc(t(ctx.language, "areaFolderDesc")).addText((text) => {
       text.setValue(draft.areaRoot || "");
       text.onChange((value) => {
         draft.areaRoot = value.trim();
       });
     });
+    const inheritedFolder = String(ctx.settings?.techTreeActiveProjectRoot || "").trim() || "Projects";
     renderProjectFilterSettings(container, draft, {
-      folders: DEFAULT_TECH_TREE_PROJECT_FOLDERS,
+      folders: [],
       tags: DEFAULT_ACTIVE_PROJECT_TAGS,
       namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
+    }, ctx.language, {
+      folderDesc: t(ctx.language, "techTreeProjectFoldersDesc", { folder: inheritedFolder })
     });
   }
 };

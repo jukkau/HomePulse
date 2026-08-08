@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { t } from "../i18n";
 
 const { Notice, Setting, setIcon } = require("obsidian");
 
@@ -18,10 +19,10 @@ function urlHost(value) {
   }
 }
 
-function openMusicUrl(value) {
+function openMusicUrl(value, language) {
   const url = safeUrl(value);
   if (!url) {
-    new Notice("Music URL is empty.");
+    new Notice(t(language, "musicUrlEmpty"));
     return;
   }
   window.open(url, "_blank", "noopener,noreferrer");
@@ -58,36 +59,36 @@ export const musicPlayerWidget = {
     const openButton = actions.createEl("button", { cls: "yh-music-btn" });
     const openIcon = openButton.createSpan({ cls: "yh-music-btn-icon" });
     setIcon(openIcon, "log-in");
-    openButton.createSpan({ text: "Open" });
-    openButton.addEventListener("click", () => openMusicUrl(loginUrl));
+    openButton.createSpan({ text: t(api.language, "open") });
+    openButton.addEventListener("click", () => openMusicUrl(loginUrl, api.language));
 
     const playButton = actions.createEl("button", { cls: "yh-music-btn yh-music-btn-primary" });
     const playIcon = playButton.createSpan({ cls: "yh-music-btn-icon" });
     setIcon(playIcon, "play");
-    playButton.createSpan({ text: "Play" });
-    playButton.addEventListener("click", () => openMusicUrl(playUrl));
+    playButton.createSpan({ text: t(api.language, "play") });
+    playButton.addEventListener("click", () => openMusicUrl(playUrl, api.language));
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Service name").addText((text) => {
+    new Setting(container).setName(t(ctx.language, "serviceName")).addText((text) => {
       text.setValue(draft.serviceName || "");
       text.onChange((value) => {
         draft.serviceName = value.trim();
       });
     });
-    new Setting(container).setName("Login URL").setDesc("Opened by the Open button.").addText((text) => {
+    new Setting(container).setName(t(ctx.language, "loginUrl")).setDesc(t(ctx.language, "loginUrlDesc")).addText((text) => {
       text.setPlaceholder(DEFAULT_NETEASE_URL);
       text.setValue(draft.loginUrl || "");
       text.onChange((value) => {
         draft.loginUrl = value.trim();
       });
     });
-    new Setting(container).setName("Play URL").setDesc("Opened by the Play button. Use a NetEase song, album, playlist, or homepage URL.").addText((text) => {
+    new Setting(container).setName(t(ctx.language, "playUrl")).setDesc(t(ctx.language, "playUrlDesc")).addText((text) => {
       text.setPlaceholder(DEFAULT_NETEASE_URL);
       text.setValue(draft.playUrl || "");
       text.onChange((value) => {

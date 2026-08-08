@@ -64,7 +64,8 @@ export function formatSeconds(total: LooseValue): string {
 }
 
 export function renderEmpty(container: LooseValue, text: string): void {
-  container.createDiv({ cls: "yh-empty", text });
+  const empty = container.createDiv({ cls: "yh-empty" });
+  empty.createDiv({ cls: "yh-empty-title", text });
 }
 
 export function createSvg(parent: LooseValue, tag: string, attributes: Record<string, string> = {}): SVGElement {
@@ -120,6 +121,18 @@ export function reconcilePomodoroState(state: LooseValue, config: LooseValue): L
     next.remainingSeconds = workSeconds;
   }
   return next;
+}
+
+export function shouldPersistPomodoroState(stored: LooseValue, computed: LooseValue): boolean {
+  if (stored.status !== computed.status) return true;
+  if (stored.todayCountDate !== computed.todayCountDate) return true;
+  if (stored.todayCount !== computed.todayCount) return true;
+
+  const isActive = computed.status === "running" || computed.status === "break";
+  return !isActive && (
+    stored.remainingSeconds !== computed.remainingSeconds
+    || stored.phaseStartedAt !== computed.phaseStartedAt
+  );
 }
 
 export function calculateHabitRate(habits: LooseValue, completions: LooseValue, weekStart: Date, habitDays: number): number {

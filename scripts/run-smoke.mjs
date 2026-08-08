@@ -1,4 +1,5 @@
 // Build + run offline Step 9 smoke checks against real data.json.
+// Set HOMEPULSE_SMOKE_DATA to validate a running copy without duplicating personal data.
 import esbuild from "esbuild";
 import fs from "fs";
 import path from "path";

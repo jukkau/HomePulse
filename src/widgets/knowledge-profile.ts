@@ -1,11 +1,14 @@
 ﻿// @ts-nocheck
 import { DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { t } from "../i18n";
 import {
   getProjectFileTags,
+  getInheritedProjectFolders,
   matchesProjectFilter,
   readProjectFilterConfig,
-  renderProjectFilterSettings
+  renderProjectFilterSettings,
+  withInheritedProjectFolders
 } from "../services/project-filter";
 
 import { setIcon, Setting } from "obsidian";
@@ -40,7 +43,7 @@ export const knowledgeProfileWidget = {
   defaultState: {},
   async render(container, api) {
     const files = api.snapshot.files || [];
-    const projectCount = countProjects(api.app, files, api.widgetData.config);
+    const projectCount = countProjects(api.app, files, withInheritedProjectFolders(api.widgetData.config, api.settings));
     const areas = (api.snapshot.techTree?.nodes || []).filter((node) => node.kind === "area");
     const tagCount = countTags(api.app, files);
 
@@ -48,10 +51,10 @@ export const knowledgeProfileWidget = {
     // widget is the "profile" (reference counts), not a second trend view.
     const stats = container.createDiv({ cls: "yh-knowledge-profile" });
     const items = [
-      { label: "Notes", value: files.length, icon: "file-text" },
-      { label: "Areas", value: areas.length, icon: "layers" },
-      { label: "Projects", value: projectCount, icon: "rocket" },
-      { label: "Tags", value: tagCount, icon: "hash" }
+      { label: t(api.language, "notes"), value: files.length, icon: "file-text" },
+      { label: t(api.language, "areas"), value: areas.length, icon: "layers" },
+      { label: t(api.language, "projects"), value: projectCount, icon: "rocket" },
+      { label: t(api.language, "tags"), value: tagCount, icon: "hash" }
     ];
     for (const item of items) {
       const stat = stats.createDiv({ cls: "yh-knowledge-stat" });
@@ -62,13 +65,16 @@ export const knowledgeProfileWidget = {
       body.createDiv({ cls: "yh-knowledge-stat-label", text: item.label });
     }
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    renderProjectFilterSettings(container, draft, { namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES });
+    renderProjectFilterSettings(container, draft, {
+      folders: getInheritedProjectFolders(ctx.settings, []),
+      namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
+    }, ctx.language);
   }
 };

@@ -34,7 +34,7 @@ function parseDateInput(value) {
 }
 
 export class ManualTimeRecordModal extends Modal {
-  constructor(app, config, onSave, language = "zh-CN") {
+  constructor(app, config, onSave, language = "en") {
     super(app);
     this.config = config || {};
     this.onSave = onSave;
@@ -109,7 +109,10 @@ export class ManualTimeRecordModal extends Modal {
     for (const target of items) {
       const button = grid.createEl("button", { cls: `yh-target-choice is-${target.type}` });
       button.createSpan({ cls: "yh-target-choice-title", text: target.title });
-      button.createSpan({ cls: "yh-target-choice-type", text: target.type === "task" ? this.t("taskPool") : target.type });
+      button.createSpan({
+        cls: "yh-target-choice-type",
+        text: target.type === "task" ? this.t("taskPool") : this.t(target.type)
+      });
       this.draft.targetButtons.push({ button, target });
       button.addEventListener("click", () => onSelect(target));
     }

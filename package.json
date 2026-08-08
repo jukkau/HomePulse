@@ -1,6 +1,6 @@
 {
   "name": "homepulse",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A component-based personal homepage dashboard with widgets, layouts, and knowledge workflow tools.",
   "main": "main.js",
   "scripts": {

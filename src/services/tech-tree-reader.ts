@@ -1,14 +1,14 @@
 import { DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
-import { matchesProjectFilter, readProjectFilterConfig } from "./project-filter";
+import { matchesProjectFilter, readProjectFilterConfig, toVaultRelativePath } from "./project-filter";
 
 const { normalizePath } = require("obsidian");
 
-const DEFAULT_AREA_ROOT = "20_Areas";
-const DEFAULT_ACTIVE_PROJECT_ROOT = "10_Projects/进行中";
+const DEFAULT_AREA_ROOT = "Areas";
+const DEFAULT_ACTIVE_PROJECT_ROOT = "Projects";
 
-function withinFolder(path: string, folder: string): boolean {
+function withinFolder(app: LooseValue, path: string, folder: string): boolean {
   const normalizedPath = normalizePath(path);
-  const normalizedFolder = normalizePath(folder).replace(/\/+$/, "");
+  const normalizedFolder = normalizePath(toVaultRelativePath(app, folder)).replace(/\/+$/, "");
   return normalizedPath === normalizedFolder || normalizedPath.startsWith(`${normalizedFolder}/`);
 }
 
@@ -64,8 +64,8 @@ function findAreaFile(app: LooseValue, sourceFile: LooseValue, linkpath: string,
 }
 
 export async function readTechTreeData(app: LooseValue, options: LooseValue = {}) {
-  const areaRoot = normalizePath(options.areaRoot || DEFAULT_AREA_ROOT);
-  const legacyActiveProjectRoot = normalizePath(options.activeProjectRoot || DEFAULT_ACTIVE_PROJECT_ROOT);
+  const areaRoot = normalizePath(toVaultRelativePath(app, options.areaRoot || DEFAULT_AREA_ROOT) || DEFAULT_AREA_ROOT);
+  const legacyActiveProjectRoot = normalizePath(toVaultRelativePath(app, options.activeProjectRoot || DEFAULT_ACTIVE_PROJECT_ROOT) || DEFAULT_ACTIVE_PROJECT_ROOT);
   const projectFilter = readProjectFilterConfig({
     projectFolders: options.projectFolders ?? [legacyActiveProjectRoot],
     projectTags: options.projectTags ?? [],
@@ -73,7 +73,7 @@ export async function readTechTreeData(app: LooseValue, options: LooseValue = {}
   });
   const markdownFiles = app.vault.getMarkdownFiles();
   const areaFiles = markdownFiles.filter((candidate: LooseValue) => {
-    if (!withinFolder(candidate.path, areaRoot)) return false;
+    if (!withinFolder(app, candidate.path, areaRoot)) return false;
     return Boolean(getValueGroup(getFrontmatter(app, candidate)));
   });
 

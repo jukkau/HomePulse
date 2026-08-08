@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { t } from "../i18n";
 import { createSvg } from "./widget-api";
 
 import { Setting, setIcon } from "obsidian";
@@ -93,33 +94,36 @@ export const statsOverviewWidget = {
     };
 
     // Habits: fixed tree; streak grows leaves while today's completion controls brightness.
-    const habitsViz = card("habits", "sprout", "Habits", `${snapshot.habitTodayRate}%`, "today");
+    const habitsViz = card("habits", "sprout", t(api.language, "habits"), `${snapshot.habitTodayRate}%`, t(api.language, "unitToday"));
     renderHabitTree(habitsViz, snapshot.habitStreakDays, snapshot.habitTodayRate);
     const habitSub = snapshot.habitStreakDays
-      ? `已打卡 ${snapshot.habitStreakDays} 天`
-      : `已完成 ${snapshot.habitCompletedToday}/${snapshot.habitTotal} 个习惯`;
+      ? t(api.language, "habitStreak", { count: snapshot.habitStreakDays })
+      : t(api.language, "habitsCompleted", { done: snapshot.habitCompletedToday, total: snapshot.habitTotal });
     habitsViz.createDiv({ cls: "yh-pulse-metric-sub", text: habitSub });
 
     // Focus: today's time investment (numbers, not the focus statement itself).
-    const focusViz = card("focus", "flame", "Focus", `${snapshot.pomodoroMinutesToday}`, "min today");
+    const focusViz = card("focus", "flame", t(api.language, "focus"), `${snapshot.pomodoroMinutesToday}`, t(api.language, "minToday"));
     renderPomodoroRails(focusViz, snapshot.pomodoroToday);
-    focusViz.createDiv({ cls: "yh-pulse-metric-sub", text: `${snapshot.pomodoroToday} pomodoros logged` });
+    focusViz.createDiv({ cls: "yh-pulse-metric-sub", text: t(api.language, "pomodorosLogged", { count: snapshot.pomodoroToday }) });
 
     // Knowledge: 7-day note-creation trend.
-    const knowledgeViz = card("knowledge", "book-open", "Knowledge", `+${snapshot.notesThisWeek}`, "this week");
+    const knowledgeViz = card("knowledge", "book-open", t(api.language, "knowledge"), `+${snapshot.notesThisWeek}`, t(api.language, "thisWeek"));
     renderSparkline(knowledgeViz.createDiv({ cls: "yh-pulse-spark-wrap" }), snapshot.notesDailyLast7);
-    knowledgeViz.createDiv({ cls: "yh-pulse-metric-sub", text: "7-day note rhythm" });
+    knowledgeViz.createDiv({ cls: "yh-pulse-metric-sub", text: t(api.language, "sevenDayNoteRhythm") });
 
     // Tasks: all indexed project-task checkboxes, so it closes the row as the
     // broadest scope.
     const total = snapshot.openTaskCount + snapshot.doneTaskCount;
     const donePct = total ? Math.round((snapshot.doneTaskCount / total) * 100) : 0;
-    const tasksViz = card("tasks", "check-check", "Tasks", `${donePct}%`, "done");
+    const tasksViz = card("tasks", "check-check", t(api.language, "tasks"), `${donePct}%`, t(api.language, "done"));
     renderTaskMatrix(tasksViz, donePct);
-    tasksViz.createDiv({ cls: "yh-pulse-metric-sub", text: `${snapshot.openTaskCount} open · ${snapshot.doneTaskCount} done` });
+    tasksViz.createDiv({
+      cls: "yh-pulse-metric-sub",
+      text: t(api.language, "taskCounts", { open: snapshot.openTaskCount, done: snapshot.doneTaskCount })
+    });
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;

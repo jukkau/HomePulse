@@ -1,12 +1,24 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { formatSeconds, parseLineList, reconcilePomodoroState } from "./widget-api";
+import { t } from "../i18n";
+import {
+  formatSeconds,
+  parseLineList,
+  reconcilePomodoroState,
+  shouldPersistPomodoroState
+} from "./widget-api";
 import {
   listAreaTargets,
   listProjectTargets,
   quickCaptureTaskTarget,
   quickTarget
 } from "../services/time/target-resolver";
+import {
+  getInheritedAreaFolders,
+  getInheritedProjectFolders,
+  withInheritedAreaFolders,
+  withInheritedProjectFolders
+} from "../services/project-filter";
 
 import { Modal, Setting, setIcon } from "obsidian";
 
@@ -19,10 +31,11 @@ function clampMinutes(value, fallback, max) {
 // Replaces the old window.prompt flow (disallowed by Obsidian review) with a
 // proper Modal, while keeping a quick settings entry on the widget face.
 class PomodoroSettingsModal extends Modal {
-  constructor(app, config, onSave) {
+  constructor(app, config, onSave, language) {
     super(app);
     this.config = config;
     this.onSave = onSave;
+    this.language = language;
     this.draft = {
       workMinutes: Number(config.workMinutes) || 25,
       breakMinutes: Number(config.breakMinutes) || 5
@@ -34,11 +47,11 @@ class PomodoroSettingsModal extends Modal {
     this.modalEl.addClass("yh-settings-shell");
     contentEl.empty();
     contentEl.addClass("yh-modal", "yh-settings-modal");
-    contentEl.createEl("h2", { text: "Pomodoro settings" });
-    contentEl.createDiv({ cls: "yh-settings-subtitle", text: "Set the work and break lengths." });
+    contentEl.createEl("h2", { text: t(this.language, "pomodoroSettings") });
+    contentEl.createDiv({ cls: "yh-settings-subtitle", text: t(this.language, "pomodoroSettingsDesc") });
     const body = contentEl.createDiv({ cls: "yh-settings-body" });
 
-    new Setting(body).setName("Work minutes").addText((text) => {
+    new Setting(body).setName(t(this.language, "workMinutes")).addText((text) => {
       text.inputEl.type = "number";
       text.inputEl.min = "1";
       text.inputEl.max = "180";
@@ -47,7 +60,7 @@ class PomodoroSettingsModal extends Modal {
         this.draft.workMinutes = clampMinutes(value, 25, 180);
       });
     });
-    new Setting(body).setName("Break minutes").addText((text) => {
+    new Setting(body).setName(t(this.language, "breakMinutes")).addText((text) => {
       text.inputEl.type = "number";
       text.inputEl.min = "1";
       text.inputEl.max = "60";
@@ -58,8 +71,8 @@ class PomodoroSettingsModal extends Modal {
     });
 
     const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
-    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
-    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: "Save" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: t(this.language, "cancel") });
+    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: t(this.language, "save") });
     cancel.addEventListener("click", () => this.close());
     save.addEventListener("click", async () => {
       await this.onSave(this.draft);
@@ -69,11 +82,12 @@ class PomodoroSettingsModal extends Modal {
 }
 
 class TargetSelectorModal extends Modal {
-  constructor(app, options, onSelect) {
+  constructor(app, options, onSelect, language) {
     super(app);
     this.options = options;
     this.onSelect = onSelect;
     this.resolved = false;
+    this.language = language;
   }
 
   resolve(target) {
@@ -88,30 +102,30 @@ class TargetSelectorModal extends Modal {
     this.modalEl.addClass("yh-settings-shell");
     contentEl.empty();
     contentEl.addClass("yh-modal", "yh-settings-modal", "yh-target-modal");
-    contentEl.createEl("h2", { text: "Start focus" });
-    contentEl.createDiv({ cls: "yh-settings-subtitle", text: "Choose where this focus time should be counted." });
+    contentEl.createEl("h2", { text: t(this.language, "startFocus") });
+    contentEl.createDiv({ cls: "yh-settings-subtitle", text: t(this.language, "startFocusDesc") });
     const body = contentEl.createDiv({ cls: "yh-settings-body" });
 
-    this.renderSection(body, "Recent", this.options.recentTargets || []);
-    this.renderSection(body, "Project", this.options.projectTargets || []);
-    this.renderSection(body, "Area", this.options.areaTargets || []);
-    this.renderSection(body, "Task", [this.options.taskTarget || quickCaptureTaskTarget()]);
+    this.renderSection(body, t(this.language, "recent"), this.options.recentTargets || []);
+    this.renderSection(body, t(this.language, "project"), this.options.projectTargets || []);
+    this.renderSection(body, t(this.language, "area"), this.options.areaTargets || []);
+    this.renderSection(body, t(this.language, "task"), [this.options.taskTarget || quickCaptureTaskTarget()]);
 
     const quickWrap = body.createDiv({ cls: "yh-target-section" });
-    quickWrap.createDiv({ cls: "yh-target-section-title", text: "Quick" });
+    quickWrap.createDiv({ cls: "yh-target-section-title", text: t(this.language, "quick") });
     const quickRow = quickWrap.createDiv({ cls: "yh-target-quick-row" });
     const input = quickRow.createEl("input", {
       type: "text",
-      placeholder: "Temporary focus..."
+      placeholder: t(this.language, "temporaryFocus")
     });
-    const button = quickRow.createEl("button", { text: "Start" });
+    const button = quickRow.createEl("button", { text: t(this.language, "start") });
     button.addEventListener("click", () => {
       const target = quickTarget(input.value);
       if (target) this.resolve(target);
     });
 
     const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
-    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: t(this.language, "cancel") });
     cancel.addEventListener("click", () => this.resolve(null));
   }
 
@@ -128,15 +142,18 @@ class TargetSelectorModal extends Modal {
     for (const target of items) {
       const button = grid.createEl("button", { cls: `yh-target-choice is-${target.type}` });
       button.createSpan({ cls: "yh-target-choice-title", text: target.title });
-      button.createSpan({ cls: "yh-target-choice-type", text: target.type === "task" ? "task pool" : target.type });
+      button.createSpan({
+        cls: "yh-target-choice-type",
+        text: target.type === "task" ? t(this.language, "taskPool") : t(this.language, target.type)
+      });
       button.addEventListener("click", () => this.resolve(target));
     }
   }
 }
 
-function chooseTarget(app, options) {
+function chooseTarget(app, options, language) {
   return new Promise((resolve) => {
-    new TargetSelectorModal(app, options, resolve).open();
+    new TargetSelectorModal(app, options, resolve, language).open();
   });
 }
 
@@ -161,10 +178,10 @@ export const pomodoroWidget = {
     projectFolders: [],
     projectTags: ["type/project"],
     projectNamePrefixes: ["Project_"],
-    areaFolders: ["20_Areas"],
+    areaFolders: ["Areas"],
     areaTags: [],
     areaNamePrefixes: ["Area_"],
-    taskFile: "10_Projects/进行中/QuickCapture.md"
+    taskFile: "QuickCapture.md"
   },
   defaultState: {
     status: "idle",
@@ -217,20 +234,20 @@ export const pomodoroWidget = {
       const activeTarget = computed.activeTarget || stored.state.activeTarget;
       meta.setText(
         computed.status === "idle"
-          ? "READY TO FOCUS"
+          ? t(api.language, "readyToFocus")
           : computed.status === "running"
-            ? "FOCUSING..."
+            ? t(api.language, "focusing")
             : computed.status === "paused"
-              ? "PAUSED"
-              : "BREAK TIME"
+              ? t(api.language, "paused")
+              : t(api.language, "breakTime")
       );
-      targetLabel.setText(activeTarget ? activeTarget.title : "No target selected");
+      targetLabel.setText(activeTarget ? activeTarget.title : t(api.language, "noTargetSelected"));
       const summary = api.getTimeSummary("today");
-      count.setText(`today: ${summary.totalDuration} min focus`);
+      count.setText(t(api.language, "todayFocus", { count: summary.totalDuration }));
       const isActive = computed.status === "running" || computed.status === "break";
       setIcon(startBtn, isActive ? "pause" : "play");
-      const changed = JSON.stringify(computed) !== JSON.stringify(stored.state);
-      if (changed) {
+      if (shouldPersistPomodoroState(stored.state, computed)) {
+        const sameActivePhase = isActive && stored.state.status === computed.status;
         if (stored.state.status === "running" && computed.status === "break" && activeTarget) {
           const ui = api.getUiState();
           if (!ui.loggingPomodoro) {
@@ -248,8 +265,8 @@ export const pomodoroWidget = {
         }
         await api.saveState({
           status: computed.status,
-          remainingSeconds: computed.remainingSeconds,
-          phaseStartedAt: computed.phaseStartedAt,
+          remainingSeconds: sameActivePhase ? stored.state.remainingSeconds : computed.remainingSeconds,
+          phaseStartedAt: sameActivePhase ? stored.state.phaseStartedAt : computed.phaseStartedAt,
           todayCountDate: computed.todayCountDate,
           todayCount: computed.todayCount,
           activeTarget,
@@ -277,12 +294,16 @@ export const pomodoroWidget = {
       } else {
         let activeTarget = computed.activeTarget;
         if (!activeTarget && computed.status !== "break") {
+          const targetConfig = withInheritedAreaFolders(
+            withInheritedProjectFolders(api.getConfig(), api.settings),
+            api.settings
+          );
           activeTarget = await chooseTarget(api.app, {
             recentTargets: computed.recentTargets || [],
-            projectTargets: listProjectTargets(api.app, api.getConfig()),
-            areaTargets: listAreaTargets(api.app, api.getConfig()),
-            taskTarget: quickCaptureTaskTarget(api.app, api.getConfig().taskFile)
-          });
+            projectTargets: listProjectTargets(api.app, targetConfig),
+            areaTargets: listAreaTargets(api.app, targetConfig),
+            taskTarget: quickCaptureTaskTarget(api.app, targetConfig.taskFile)
+          }, api.language);
           if (!activeTarget) return;
         }
         await api.saveState({
@@ -322,68 +343,68 @@ export const pomodoroWidget = {
           remainingSeconds: draft.workMinutes * 60,
           phaseStartedAt: 0
         }, true);
-      }).open();
+      }, api.language).open();
     });
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Work minutes").addText((text) => {
+    new Setting(container).setName(t(ctx.language, "workMinutes")).addText((text) => {
       text.setValue(String(draft.workMinutes || 25));
       text.onChange((value) => {
         draft.workMinutes = Number(value) || 25;
       });
     });
-    new Setting(container).setName("Break minutes").addText((text) => {
+    new Setting(container).setName(t(ctx.language, "breakMinutes")).addText((text) => {
       text.setValue(String(draft.breakMinutes || 5));
       text.onChange((value) => {
         draft.breakMinutes = Number(value) || 5;
       });
     });
-    new Setting(container).setName("Project folders").setDesc("One vault-relative folder per line. Empty means any folder.").addTextArea((text) => {
-      text.setValue(serializeLines(draft.projectFolders));
+    new Setting(container).setName(t(ctx.language, "projectFolders")).setDesc(t(ctx.language, "projectFoldersDesc")).addTextArea((text) => {
+      text.setValue(serializeLines(draft.projectFolders?.length ? draft.projectFolders : getInheritedProjectFolders(ctx.settings, [])));
       text.onChange((value) => {
         draft.projectFolders = parseLineList(value);
       });
     });
-    new Setting(container).setName("Project tags").setDesc("All listed tags must be present. One tag per line, with or without #.").addTextArea((text) => {
+    new Setting(container).setName(t(ctx.language, "projectTags")).setDesc(t(ctx.language, "projectTagsDesc")).addTextArea((text) => {
       text.setValue(serializeLines(draft.projectTags));
       text.onChange((value) => {
         draft.projectTags = parseLineList(value);
       });
     });
-    new Setting(container).setName("Project filename prefixes").setDesc("One prefix per line. Empty disables the filename condition.").addTextArea((text) => {
+    new Setting(container).setName(t(ctx.language, "projectPrefixes")).setDesc(t(ctx.language, "projectPrefixesDesc")).addTextArea((text) => {
       text.setValue(serializeLines(draft.projectNamePrefixes));
       text.onChange((value) => {
         draft.projectNamePrefixes = parseLineList(value);
       });
     });
-    new Setting(container).setName("Area folders").setDesc("One vault-relative folder per line. Empty means any folder.").addTextArea((text) => {
-      text.setValue(serializeLines(draft.areaFolders));
+    new Setting(container).setName(t(ctx.language, "areaFolders")).setDesc(t(ctx.language, "areaFoldersDesc")).addTextArea((text) => {
+      text.setValue(serializeLines(draft.areaFolders?.length ? draft.areaFolders : getInheritedAreaFolders(ctx.settings, ["Areas"])));
       text.onChange((value) => {
         draft.areaFolders = parseLineList(value);
       });
     });
-    new Setting(container).setName("Area tags").setDesc("All listed tags must be present. One tag per line, with or without #.").addTextArea((text) => {
+    new Setting(container).setName(t(ctx.language, "areaTags")).setDesc(t(ctx.language, "areaTagsDesc")).addTextArea((text) => {
       text.setValue(serializeLines(draft.areaTags));
       text.onChange((value) => {
         draft.areaTags = parseLineList(value);
       });
     });
-    new Setting(container).setName("Area filename prefixes").setDesc("One prefix per line. Empty disables the filename condition.").addTextArea((text) => {
+    new Setting(container).setName(t(ctx.language, "areaPrefixes")).setDesc(t(ctx.language, "areaPrefixesDesc")).addTextArea((text) => {
       text.setValue(serializeLines(draft.areaNamePrefixes));
       text.onChange((value) => {
         draft.areaNamePrefixes = parseLineList(value);
       });
     });
-    new Setting(container).setName("Task file").setDesc("Vault-relative file used as the task time pool.").addText((text) => {
-      text.setValue(draft.taskFile || "10_Projects/进行中/QuickCapture.md");
+    new Setting(container).setName(t(ctx.language, "taskFile")).setDesc(t(ctx.language, "taskFileDesc")).addText((text) => {
+      text.setValue(draft.taskFile || "QuickCapture.md");
       text.onChange((value) => {
-        draft.taskFile = value.trim() || "10_Projects/进行中/QuickCapture.md";
+        draft.taskFile = value.trim() || "QuickCapture.md";
       });
     });
   }

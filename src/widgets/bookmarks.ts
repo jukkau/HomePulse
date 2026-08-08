@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { t } from "../i18n";
 import { normalizeArray } from "./widget-api";
 
 const { Notice, Setting, setIcon } = require("obsidian");
@@ -84,8 +85,8 @@ export const bookmarksWidget = {
       const empty = container.createEl("button", { cls: "yh-empty yh-empty-action yh-bookmarks-empty" });
       const icon = empty.createDiv({ cls: "yh-empty-icon" });
       setIcon(icon, "bookmark-plus");
-      empty.createDiv({ cls: "yh-empty-title", text: "No bookmarks configured." });
-      empty.createDiv({ cls: "yh-empty-subtitle", text: "Add your first link" });
+      empty.createDiv({ cls: "yh-empty-title", text: t(api.language, "noBookmarks") });
+      empty.createDiv({ cls: "yh-empty-subtitle", text: t(api.language, "addFirstLink") });
       empty.addEventListener("click", () => {
         api.openSettings?.();
       });
@@ -98,39 +99,39 @@ export const bookmarksWidget = {
         cls: `yh-action-btn ${variant === "compact" ? "is-compact" : ""}`
       });
       renderBookmarkIcon(button, item, useFavicons);
-      button.createDiv({ cls: "yh-action-label", text: item.label || "bookmark" });
+      button.createDiv({ cls: "yh-action-label", text: item.label || t(api.language, "bookmarks") });
       button.addEventListener("click", () => {
         const target = String(item.value || "").trim();
         if (!/^https?:\/\//i.test(target)) {
-          new Notice(`Invalid bookmark URL: ${target}`);
+          new Notice(t(api.language, "invalidBookmarkUrl", { url: target }));
           return;
         }
         window.open(target, "_blank", "noopener,noreferrer");
       });
     }
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Layout").addDropdown((drop) => {
-      drop.addOption("grid", "Grid");
-      drop.addOption("compact", "Compact list");
+    new Setting(container).setName(t(ctx.language, "layout")).addDropdown((drop) => {
+      drop.addOption("grid", t(ctx.language, "grid"));
+      drop.addOption("compact", t(ctx.language, "compactList"));
       drop.setValue(draft.variant === "compact" ? "compact" : "grid");
       drop.onChange((value) => {
         draft.variant = value;
       });
     });
-    new Setting(container).setName("Use native favicons").setDesc("Loads each site's /favicon.ico. This may make network requests to bookmark domains.").addToggle((toggle) => {
+    new Setting(container).setName(t(ctx.language, "useNativeFavicons")).setDesc(t(ctx.language, "useNativeFaviconsDesc")).addToggle((toggle) => {
       toggle.setValue(draft.useFavicons === true);
       toggle.onChange((value) => {
         draft.useFavicons = value;
       });
     });
-    new Setting(container).setName("Bookmarks").setDesc("One per line. Format: label|url, or paste a URL directly.").addTextArea((text) => {
+    new Setting(container).setName(t(ctx.language, "bookmarks")).setDesc(t(ctx.language, "bookmarksDesc")).addTextArea((text) => {
       text.setValue(serializeBookmarks(draft.items || []));
       text.onChange((value) => {
         draft.items = parseBookmarks(value);
