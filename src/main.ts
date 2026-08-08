@@ -664,7 +664,6 @@ class YukiHomepageView extends ItemView {
     const accentColor = getAccentCssValue(this.plugin.data.settings);
     container.style.setProperty("--yh-accent", accentColor);
     container.style.setProperty("--komo-sakura", accentColor);
-    container.style.setProperty("--komo-border-sakura", "color-mix(in srgb, var(--yh-accent) 26%, transparent)");
 
     const frame = container.createDiv({ cls: "yh-frame" });
     const loading = frame.createDiv({ cls: "yh-loading", text: this.plugin.t("loadingWidgets") });
