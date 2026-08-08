@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { t } from "../i18n";
 import { localDateKey } from "./widget-api";
 
 import { Notice, Setting } from "obsidian";
@@ -22,7 +23,7 @@ export const calendarWidget = {
     const prev = nav.createEl("button", { text: "‹" });
     nav.createDiv({
       cls: "yh-calendar-title",
-      text: new Date(state.year, state.month).toLocaleDateString("en-US", { year: "numeric", month: "long" })
+      text: new Date(state.year, state.month).toLocaleDateString(api.language === "zh-CN" ? "zh-CN" : "en-US", { year: "numeric", month: "long" })
     });
     const next = nav.createEl("button", { text: "›" });
     prev.addEventListener("click", async () => {
@@ -42,7 +43,8 @@ export const calendarWidget = {
       await api.requestRender();
     });
     const head = container.createDiv({ cls: "yh-calendar-grid yh-calendar-head" });
-    ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].forEach((day, index) => {
+    ["weekdayMon", "weekdayTue", "weekdayWed", "weekdayThu", "weekdayFri", "weekdaySat", "weekdaySun"].forEach((key, index) => {
+      const day = t(api.language, key);
       const label = head.createDiv({ text: day });
       if (index === 5) label.addClass("is-saturday");
       if (index === 6) label.addClass("is-sunday");
@@ -81,12 +83,12 @@ export const calendarWidget = {
           api.app.commands.executeCommandById("daily-notes:goto-today");
           return;
         }
-        new Notice(`No daily note found for ${key}.`);
+        new Notice(t(api.language, "noDailyNoteForDate", { date: key }));
       });
     }
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;

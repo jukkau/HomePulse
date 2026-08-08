@@ -19,6 +19,7 @@ export type HomepageSettings = {
   lockHomepage: boolean;
   language: "zh-CN" | "en";
   themePreset: string;
+  accentColorMode: "theme" | "custom";
   accentColor: string;
   profileName: string;
   profileSignature: string;

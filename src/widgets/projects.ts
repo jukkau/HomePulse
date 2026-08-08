@@ -1,17 +1,18 @@
 ﻿// @ts-nocheck
 import { DEFAULT_PROJECT_FOLDERS, DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { readProjectFilterConfig, renderProjectFilterSettings } from "../services/project-filter";
+import { t } from "../i18n";
+import { getInheritedProjectFolders, readProjectFilterConfig, renderProjectFilterSettings, withInheritedProjectFolders } from "../services/project-filter";
 import { renderEmpty } from "./widget-api";
 
 const { Setting } = require("obsidian");
 
-function formatUpdatedAt(timestamp, now) {
+function formatUpdatedAt(timestamp, now, language) {
   const elapsedDays = Math.max(0, Math.floor((now.getTime() - Number(timestamp || 0)) / 86400000));
-  if (elapsedDays === 0) return "today";
-  if (elapsedDays === 1) return "yesterday";
-  if (elapsedDays < 14) return `${elapsedDays}d ago`;
-  return new Date(timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (elapsedDays === 0) return t(language, "today");
+  if (elapsedDays === 1) return t(language, "yesterday");
+  if (elapsedDays < 14) return t(language, "daysAgoShort", { count: elapsedDays });
+  return new Date(timestamp).toLocaleDateString(language === "zh-CN" ? "zh-CN" : "en-US", { month: "short", day: "numeric" });
 }
 
 export const projectsWidget = {
@@ -29,13 +30,13 @@ export const projectsWidget = {
   },
   defaultState: {},
   async render(container, api) {
-    const filter = readProjectFilterConfig(api.widgetData.config, {
+    const filter = readProjectFilterConfig(withInheritedProjectFolders(api.widgetData.config, api.settings), {
       folders: DEFAULT_PROJECT_FOLDERS,
       namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
     });
     const items = api.snapshot.getProjects(filter, Number(api.widgetData.config.limit) || 10);
     if (!items.length) {
-      renderEmpty(container, "No project notes found for this filter.");
+      renderEmpty(container, t(api.language, "noProjectNotes"));
       return;
     }
     const list = container.createDiv({ cls: "yh-list yh-project-list" });
@@ -50,25 +51,25 @@ export const projectsWidget = {
       if (item.progress) {
         meta.createSpan({ cls: "yh-project-status", text: item.progress });
       }
-      meta.createSpan({ text: formatUpdatedAt(item.mtime, api.snapshot.now) });
+      meta.createSpan({ text: formatUpdatedAt(item.mtime, api.snapshot.now, api.language) });
       row.createDiv({ cls: "yh-row-arrow", text: "↗", attr: { "aria-hidden": "true" } });
       row.addEventListener("click", async () => {
         await api.openPath(item.path);
       });
     }
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
     renderProjectFilterSettings(container, draft, {
-      folders: DEFAULT_PROJECT_FOLDERS,
+      folders: getInheritedProjectFolders(ctx.settings, DEFAULT_PROJECT_FOLDERS),
       namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
-    });
-    new Setting(container).setName("Limit").addText((text) => {
+    }, ctx.language);
+    new Setting(container).setName(t(ctx.language, "limit")).addText((text) => {
       text.setValue(String(draft.limit || 10));
       text.onChange((value) => {
         draft.limit = Number(value) || 10;

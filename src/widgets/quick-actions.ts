@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { t } from "../i18n";
 import {
   normalizeArray,
   parseQuickActions,
@@ -44,6 +45,15 @@ function renderActionIcon(button, item) {
   }
 }
 
+function actionLabel(language, item) {
+  const label = String(item.label || "").trim();
+  if (item.type === "daily-note" && (!label || label === "daily" || label === "日记")) return t(language, "daily");
+  if (item.type === "command" && item.value === "global-search:open" && (!label || label === "search" || label === "搜索")) {
+    return t(language, "search");
+  }
+  return label || t(language, "untitled");
+}
+
 export const quickActionsWidget = {
   type: "quick-actions",
   displayName: "System",
@@ -68,13 +78,13 @@ export const quickActionsWidget = {
     const configuredVariant = api.widgetData.config.variant;
     const variant = configuredVariant === "stack" ? "stack" : configuredVariant === "compact" ? "compact" : "grid";
     if (!items.length && !secondaryItems.length) {
-      renderEmpty(container, "No quick actions configured.");
+      renderEmpty(container, t(api.language, "noQuickActions"));
       return;
     }
     const runAction = async (item) => {
       if (item.type === "command") {
         if (!api.app.commands.commands[item.value]) {
-          new Notice(`Command not found: ${item.value}`);
+          new Notice(t(api.language, "commandNotFound", { command: item.value }));
           return;
         }
         api.app.commands.executeCommandById(item.value);
@@ -88,7 +98,7 @@ export const quickActionsWidget = {
         if (api.app.commands.commands["daily-notes:goto-today"]) {
           api.app.commands.executeCommandById("daily-notes:goto-today");
         } else {
-          new Notice("No daily note command found.");
+          new Notice(t(api.language, "noDailyNoteCommand"));
         }
       }
     };
@@ -97,14 +107,14 @@ export const quickActionsWidget = {
         cls: `yh-action-btn ${compact ? "is-compact" : ""}`
       });
       renderActionIcon(button, item);
-      button.createDiv({ cls: "yh-action-label", text: item.label });
+      button.createDiv({ cls: "yh-action-label", text: actionLabel(api.language, item) });
       button.addEventListener("click", () => void runAction(item));
     };
     if (variant === "stack") {
       const stack = container.createDiv({ cls: "yh-action-stack" });
       const groups = [
-        { title: api.widgetData.config.sectionTitle || "bookmarks", items },
-        { title: api.widgetData.config.secondaryTitle || "system", items: secondaryItems }
+        { title: api.widgetData.config.sectionTitle || t(api.language, "bookmarks"), items },
+        { title: api.widgetData.config.secondaryTitle || t(api.language, "system"), items: secondaryItems }
       ];
       for (const group of groups) {
         if (!group.items.length) continue;
@@ -118,22 +128,29 @@ export const quickActionsWidget = {
     const grid = container.createDiv({ cls: `yh-action-grid is-${variant}` });
     for (const item of items) renderButton(grid, item, variant === "compact");
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Layout").addDropdown((drop) => {
-      drop.addOption("grid", "Grid");
-      drop.addOption("compact", "Compact list");
+    new Setting(container).setName(t(ctx.language, "layout")).addDropdown((drop) => {
+      drop.addOption("grid", t(ctx.language, "grid"));
+      drop.addOption("compact", t(ctx.language, "compactList"));
       drop.setValue(draft.variant === "compact" ? "compact" : "grid");
       drop.onChange((value) => {
         draft.variant = value;
       });
     });
-    new Setting(container).setName("System actions").setDesc("Format: label|type|value").addTextArea((text) => {
+    const actionsSetting = new Setting(container)
+      .setName(t(ctx.language, "systemActions"))
+      .setDesc(t(ctx.language, "systemActionsDesc"));
+    actionsSetting.settingEl.addClass("yh-quick-actions-setting");
+    actionsSetting.addTextArea((text) => {
+      text.inputEl.rows = 4;
+      text.inputEl.spellcheck = false;
+      text.setPlaceholder("daily|daily-note|\nsearch|command|global-search:open");
       text.setValue(serializeQuickActions(draft.items || []));
       text.onChange((value) => {
         draft.items = parseQuickActions(value);

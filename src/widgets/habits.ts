@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { t } from "../i18n";
 import { parseLineList } from "../core/utils";
 import { addDays, createSvg, localDateKey, normalizeArray, renderEmpty } from "./widget-api";
 
@@ -36,11 +37,12 @@ function recordedYears(completions, currentYear) {
 }
 
 class HabitForestModal extends Modal {
-  constructor(app, habits, completions, now) {
+  constructor(app, habits, completions, now, language) {
     super(app);
     this.habits = habits;
     this.completions = completions;
     this.now = now;
+    this.language = language;
   }
 
   onOpen() {
@@ -52,8 +54,8 @@ class HabitForestModal extends Modal {
 
     const header = contentEl.createDiv({ cls: "yh-forest-modal-header" });
     const heading = header.createDiv();
-    heading.createEl("h2", { text: "habit activity" });
-    heading.createDiv({ cls: "yh-forest-modal-subtitle", text: "A long-term view of the habits you planted." });
+    heading.createEl("h2", { text: t(this.language, "habitActivity") });
+    heading.createDiv({ cls: "yh-forest-modal-subtitle", text: t(this.language, "habitActivityDesc") });
     const yearSelect = header.createEl("select", { cls: "yh-habit-year-select" });
     for (const year of years) yearSelect.createEl("option", { text: String(year), value: String(year) });
 
@@ -79,10 +81,10 @@ class HabitForestModal extends Modal {
       const summary = board.createDiv({ cls: "yh-habit-history-summary" });
       const checks = summary.createDiv({ cls: "yh-habit-history-stat" });
       checks.createDiv({ cls: "yh-habit-history-value", text: String(totalChecks) });
-      checks.createDiv({ cls: "yh-habit-history-label", text: "check-ins" });
+      checks.createDiv({ cls: "yh-habit-history-label", text: t(this.language, "checkIns") });
       const days = summary.createDiv({ cls: "yh-habit-history-stat" });
       days.createDiv({ cls: "yh-habit-history-value", text: String(activeDays) });
-      days.createDiv({ cls: "yh-habit-history-label", text: "active days" });
+      days.createDiv({ cls: "yh-habit-history-label", text: t(this.language, "activeDays") });
 
       const scroll = board.createDiv({ cls: "yh-habit-history-scroll" });
       const svg = createSvg(scroll, "svg", {
@@ -95,9 +97,9 @@ class HabitForestModal extends Modal {
       const left = 26;
       const top = 22;
       const offset = first.getDay();
-      for (const [weekday, label] of [[1, "M"], [3, "W"], [5, "F"]]) {
+      for (const [weekday, labelKey] of [[1, "weekdayMon"], [3, "weekdayWed"], [5, "weekdayFri"]]) {
         const text = createSvg(svg, "text", { x: 4, y: top + weekday * (cell + gap) + 8, class: "yh-heatmap-axis" });
-        text.textContent = label;
+        text.textContent = t(this.language, labelKey);
       }
       let lastMonth = -1;
       daily.forEach((item, index) => {
@@ -108,7 +110,7 @@ class HabitForestModal extends Modal {
         const y = top + weekday * (cell + gap);
         if (item.date.getMonth() !== lastMonth && item.date.getDate() <= 7) {
           const month = createSvg(svg, "text", { x, y: 11, class: "yh-heatmap-axis yh-heatmap-month" });
-          month.textContent = item.date.toLocaleDateString("en-US", { month: "short" });
+          month.textContent = item.date.toLocaleDateString(this.language === "zh-CN" ? "zh-CN" : "en-US", { month: "short" });
           lastMonth = item.date.getMonth();
         }
         const rect = createSvg(svg, "rect", {
@@ -123,9 +125,9 @@ class HabitForestModal extends Modal {
       });
 
       const legend = board.createDiv({ cls: "yh-habit-history-legend" });
-      legend.createSpan({ text: "less" });
+      legend.createSpan({ text: t(this.language, "less") });
       for (let level = 0; level <= 4; level += 1) legend.createSpan({ cls: `yh-heatmap-legend-cell is-level-${level}` });
-      legend.createSpan({ text: "more" });
+      legend.createSpan({ text: t(this.language, "more") });
     };
 
     yearSelect.addEventListener("change", () => {
@@ -137,11 +139,12 @@ class HabitForestModal extends Modal {
 }
 
 class HabitRenameModal extends Modal {
-  constructor(app, currentName, habits, onRename) {
+  constructor(app, currentName, habits, onRename, language) {
     super(app);
     this.currentName = currentName;
     this.habits = habits;
     this.onRename = onRename;
+    this.language = language;
   }
 
   onOpen() {
@@ -149,11 +152,11 @@ class HabitRenameModal extends Modal {
     this.modalEl.addClass("yh-settings-shell", "yh-habit-add-shell");
     contentEl.empty();
     contentEl.addClass("yh-modal", "yh-settings-modal", "yh-habit-add-modal");
-    contentEl.createEl("h2", { text: "rename habit" });
-    contentEl.createDiv({ cls: "yh-settings-subtitle", text: "Give this habit a new name. Its history is kept." });
+    contentEl.createEl("h2", { text: t(this.language, "renameHabit") });
+    contentEl.createDiv({ cls: "yh-settings-subtitle", text: t(this.language, "renameHabitDesc") });
     const body = contentEl.createDiv({ cls: "yh-settings-body" });
     let input;
-    new Setting(body).setName("New name").addText((text) => {
+    new Setting(body).setName(t(this.language, "newName")).addText((text) => {
       input = text;
       text.setValue(this.currentName);
       window.setTimeout(() => {
@@ -166,8 +169,8 @@ class HabitRenameModal extends Modal {
     });
     const error = contentEl.createDiv({ cls: "yh-habit-add-error" });
     const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
-    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
-    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: "Rename" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: t(this.language, "cancel") });
+    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: t(this.language, "rename") });
     const submit = async () => {
       const name = String(input?.getValue() || "").trim();
       if (!name || name === this.currentName) {
@@ -175,7 +178,7 @@ class HabitRenameModal extends Modal {
         return;
       }
       if (this.habits.some((habit) => habit.toLowerCase() === name.toLowerCase())) {
-        error.setText("That habit already exists.");
+        error.setText(t(this.language, "habitExists"));
         return;
       }
       await this.onRename(name);
@@ -187,10 +190,11 @@ class HabitRenameModal extends Modal {
 }
 
 class HabitAddModal extends Modal {
-  constructor(app, habits, onAdd) {
+  constructor(app, habits, onAdd, language) {
     super(app);
     this.habits = habits;
     this.onAdd = onAdd;
+    this.language = language;
   }
 
   onOpen() {
@@ -198,13 +202,13 @@ class HabitAddModal extends Modal {
     this.modalEl.addClass("yh-settings-shell", "yh-habit-add-shell");
     contentEl.empty();
     contentEl.addClass("yh-modal", "yh-settings-modal", "yh-habit-add-modal");
-    contentEl.createEl("h2", { text: "plant a new habit" });
-    contentEl.createDiv({ cls: "yh-settings-subtitle", text: "Add one habit you want to grow over time." });
+    contentEl.createEl("h2", { text: t(this.language, "plantHabit") });
+    contentEl.createDiv({ cls: "yh-settings-subtitle", text: t(this.language, "plantHabitDesc") });
     const body = contentEl.createDiv({ cls: "yh-settings-body" });
     let input;
-    new Setting(body).setName("Habit name").addText((text) => {
+    new Setting(body).setName(t(this.language, "habitName")).addText((text) => {
       input = text;
-      text.setPlaceholder("e.g. read, move, write");
+      text.setPlaceholder(t(this.language, "habitNamePlaceholder"));
       window.setTimeout(() => text.inputEl.focus(), 0);
       text.inputEl.addEventListener("keydown", (event) => {
         if (event.key === "Enter") void submit();
@@ -212,16 +216,16 @@ class HabitAddModal extends Modal {
     });
     const error = contentEl.createDiv({ cls: "yh-habit-add-error" });
     const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
-    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
-    const add = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: "Add habit" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: t(this.language, "cancel") });
+    const add = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: t(this.language, "addHabit") });
     const submit = async () => {
       const name = String(input?.getValue() || "").trim();
       if (!name) {
-        error.setText("Enter a habit name first.");
+        error.setText(t(this.language, "enterHabitName"));
         return;
       }
       if (this.habits.some((habit) => habit.toLowerCase() === name.toLowerCase())) {
-        error.setText("That habit already exists.");
+        error.setText(t(this.language, "habitExists"));
         return;
       }
       await this.onAdd(name);
@@ -261,11 +265,11 @@ export const habitsWidget = {
     const forest = container.createDiv({ cls: "yh-habit-forest" });
     const today = forest.createDiv({ cls: "yh-habit-today yh-habit-checkins" });
     const todayHead = today.createDiv({ cls: "yh-habit-today-head" });
-    todayHead.createDiv({ text: "today" });
-    todayHead.createDiv({ text: api.snapshot.now.toLocaleDateString("en-US", { month: "short", day: "numeric" }) });
+    todayHead.createDiv({ text: t(api.language, "habitsToday") });
+    todayHead.createDiv({ text: api.snapshot.now.toLocaleDateString(api.language === "zh-CN" ? "zh-CN" : "en-US", { month: "short", day: "numeric" }) });
 
     if (!habits.length) {
-      renderEmpty(today, "Add your first long-term habit below.");
+      renderEmpty(today, t(api.language, "addFirstHabit"));
     } else {
       const orderedHabits = [...habits].sort((a, b) => {
         return Number(Boolean(completions[`${a}|${todayKey}`])) - Number(Boolean(completions[`${b}|${todayKey}`]));
@@ -304,7 +308,7 @@ export const habitsWidget = {
               }
             }
             await api.saveState({ habits: updatedHabits, completions: updatedCompletions }, true);
-          }).open();
+          }, api.language).open();
         });
       }
     }
@@ -318,25 +322,28 @@ export const habitsWidget = {
     });
     setIcon(addBtn, "plus");
     setIcon(forestBtn, "trees");
-    footer.createDiv({ cls: "yh-habit-rate", text: `${completedToday.length}/${habits.length} planted today` });
+    footer.createDiv({
+      cls: "yh-habit-rate",
+      text: t(api.language, "plantedToday", { done: completedToday.length, total: habits.length })
+    });
     addBtn.addEventListener("click", () => {
       new HabitAddModal(api.app, habits, async (name) => {
         await api.saveState({ habits: [...habits, name] }, true);
-      }).open();
+      }, api.language).open();
     });
     forestBtn.addEventListener("click", () => {
-      new HabitForestModal(api.app, habits, completions, api.snapshot.now).open();
+      new HabitForestModal(api.app, habits, completions, api.snapshot.now, api.language).open();
     });
   },
   renderSettings(container, draft, ctx) {
     const state = ctx.state;
-    new Setting(container).setName("Title").addText((text) => {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Habit list").setDesc("One long-term habit per line.").addTextArea((text) => {
+    new Setting(container).setName(t(ctx.language, "habitList")).setDesc(t(ctx.language, "habitListDesc")).addTextArea((text) => {
       text.setValue(normalizeArray(state.habits, []).join("\n"));
       text.onChange((value) => {
         draft._habitList = value;

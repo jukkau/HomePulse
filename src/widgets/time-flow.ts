@@ -1,14 +1,15 @@
 // @ts-nocheck
 import { Setting, setIcon } from "obsidian";
+import { t } from "../i18n";
 
 import { renderEmpty } from "./widget-api";
 
 const ALLOWED_SIZE_PRESETS = ["W2H2", "W3H2", "W4H2", "W5H2", "W2H3", "W3H3", "W4H3", "W5H3"];
 
 const RANGES = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" }
+  { key: "today", labelKey: "rangeToday" },
+  { key: "week", labelKey: "rangeWeek" },
+  { key: "month", labelKey: "rangeMonth" }
 ];
 
 function formatDuration(minutes) {
@@ -19,9 +20,10 @@ function formatDuration(minutes) {
   return mins ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-function formatDateTime(timestamp) {
+function formatDateTime(timestamp, language) {
   const date = new Date(Number(timestamp) || Date.now());
-  return `${date.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" })} ${date.toLocaleTimeString("zh-CN", {
+  const locale = language === "zh-CN" ? "zh-CN" : "en-US";
+  return `${date.toLocaleDateString(locale, { month: "2-digit", day: "2-digit" })} ${date.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false
@@ -51,29 +53,29 @@ function rangeBounds(range, now) {
   return { start: new Date(date.getFullYear(), date.getMonth(), 1).getTime(), end };
 }
 
-function renderBuckets(parent, title, buckets) {
+function renderBuckets(parent, title, buckets, language) {
   const section = parent.createDiv({ cls: "yh-time-flow-section" });
   section.createDiv({ cls: "yh-time-flow-section-title", text: title });
   const list = section.createDiv({ cls: "yh-time-flow-buckets" });
   const top = buckets.slice(0, 3);
   if (!top.length) {
-    list.createDiv({ cls: "yh-time-flow-empty-line", text: "No data" });
+    list.createDiv({ cls: "yh-time-flow-empty-line", text: t(language, "noData") });
     return;
   }
 
   for (const bucket of top) {
     const row = list.createDiv({ cls: "yh-time-flow-bucket" });
-    row.createDiv({ cls: "yh-time-flow-bucket-title", text: bucket.title || bucket.id || "Untitled" });
+    row.createDiv({ cls: "yh-time-flow-bucket-title", text: bucket.title || bucket.id || t(language, "untitled") });
     row.createDiv({ cls: "yh-time-flow-bucket-value", text: formatDuration(bucket.duration) });
   }
 }
 
-function renderRangeTabs(parent, activeRange, onSelect) {
+function renderRangeTabs(parent, activeRange, onSelect, language) {
   const tabs = parent.createDiv({ cls: "yh-time-flow-tabs" });
   for (const range of RANGES) {
     const button = tabs.createEl("button", {
       cls: range.key === activeRange ? "yh-time-flow-tab is-active" : "yh-time-flow-tab",
-      text: range.label
+      text: t(language, range.labelKey)
     });
     button.addEventListener("click", () => onSelect(range.key));
   }
@@ -102,20 +104,20 @@ export const timeFlowWidget = {
     const top = root.createDiv({ cls: "yh-time-flow-top" });
     const metric = top.createDiv({ cls: "yh-time-flow-metric" });
     metric.createDiv({ cls: "yh-time-flow-total", text: formatDuration(summary.totalDuration) });
-    metric.createDiv({ cls: "yh-time-flow-meta", text: `${summary.count} logs` });
+    metric.createDiv({ cls: "yh-time-flow-meta", text: t(api.language, "logCount", { count: summary.count }) });
     renderRangeTabs(top, activeRange, (range) => {
       api.setUiState({ range });
       api.requestRender();
-    });
+    }, api.language);
 
     const bucketGrid = root.createDiv({ cls: "yh-time-flow-grid" });
-    renderBuckets(bucketGrid, "Projects", summary.byProject);
-    renderBuckets(bucketGrid, "Areas", summary.byArea);
+    renderBuckets(bucketGrid, t(api.language, "projects"), summary.byProject, api.language);
+    renderBuckets(bucketGrid, t(api.language, "areas"), summary.byArea, api.language);
 
     const recent = root.createDiv({ cls: "yh-time-flow-recent" });
-    recent.createDiv({ cls: "yh-time-flow-section-title", text: "Recent" });
+    recent.createDiv({ cls: "yh-time-flow-section-title", text: t(api.language, "recent") });
     if (!logs.length) {
-      renderEmpty(recent, "No time logs yet.");
+      renderEmpty(recent, t(api.language, "noTimeLogs"));
       return;
     }
 
@@ -123,9 +125,10 @@ export const timeFlowWidget = {
     for (const log of logs) {
       const row = list.createDiv({ cls: "yh-list-row yh-time-flow-row" });
       const left = row.createDiv({ cls: "yh-list-left" });
-      left.createDiv({ cls: "yh-list-title", text: targetTitle(log) || "Untitled" });
-      left.createDiv({ cls: "yh-list-meta", text: `${formatDateTime(log.startTime)} / ${formatDuration(log.duration)} / ${log.source}` });
-      const remove = row.createEl("button", { cls: "yh-time-flow-delete", attr: { "aria-label": "Delete time log" } });
+      left.createDiv({ cls: "yh-list-title", text: targetTitle(log) || t(api.language, "untitled") });
+      const source = t(api.language, log.source === "manual" ? "sourceManual" : "sourcePomodoro");
+      left.createDiv({ cls: "yh-list-meta", text: `${formatDateTime(log.startTime, api.language)} / ${formatDuration(log.duration)} / ${source}` });
+      const remove = row.createEl("button", { cls: "yh-time-flow-delete", attr: { "aria-label": t(api.language, "deleteTimeLog") } });
       setIcon(remove, "trash-2");
       remove.addEventListener("click", async (event) => {
         event.stopPropagation();
@@ -134,14 +137,14 @@ export const timeFlowWidget = {
       });
     }
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Recent logs").setDesc("How many recent rows to show (3-10).").addText((text) => {
+    new Setting(container).setName(t(ctx.language, "recentLogs")).setDesc(t(ctx.language, "recentLogsDesc")).addText((text) => {
       text.setValue(String(draft.recentLimit || 6));
       text.onChange((value) => {
         draft.recentLimit = Math.max(3, Math.min(10, Number(value) || 6));

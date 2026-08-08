@@ -12,7 +12,7 @@
  */
 
 export const DEFAULT_DATA = {
-  schemaVersion: 2,
+  schemaVersion: 3,
 
   /** false when a user first installs the plugin */
   initialized: false,
@@ -22,11 +22,12 @@ export const DEFAULT_DATA = {
     lockHomepage: true,
     language: "en",
     themePreset: "petal",
-    accentColor: "#f5c2e7",
+    accentColorMode: "theme",
+    accentColor: "",
     profileName: "My Homepage",
     profileSignature: "",
     obsidianStartDate: "",
-    techTreeAreaRoot: "20_Areas",
+    techTreeAreaRoot: "Areas",
     techTreeActiveProjectRoot: "Projects"
   },
 
@@ -123,10 +124,10 @@ export const DEFAULT_DATA = {
         projectFolders: [],
         projectTags: ["type/project"],
         projectNamePrefixes: ["Project_"],
-        areaFolders: ["20_Areas"],
+        areaFolders: ["Areas"],
         areaTags: [],
         areaNamePrefixes: ["Area_"],
-        taskFile: "10_Projects/进行中/QuickCapture.md"
+        taskFile: "QuickCapture.md"
       },
       state: {
         status: "idle",
@@ -188,7 +189,7 @@ export const DEFAULT_DATA = {
       },
       state: {}
     },
-    "tech-tree-main": { config: { title: "tech tree", areaRoot: "", projectFolders: ["10_Projects/进行中"], projectTags: ["type/project", "status/ing"], projectNamePrefixes: ["Project_"] },
+    "tech-tree-main": { config: { title: "tech tree", areaRoot: "", projectFolders: [], projectTags: ["type/project", "status/ing"], projectNamePrefixes: ["Project_"] },
       state: {}
     },
     "activity-main": {

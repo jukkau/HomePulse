@@ -1,7 +1,8 @@
 ﻿// @ts-nocheck
 import { DEFAULT_PROJECT_NAME_PREFIXES, DEFAULT_TASK_FOLDERS } from "../constants";
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
-import { readProjectFilterConfig, renderProjectFilterSettings } from "../services/project-filter";
+import { t } from "../i18n";
+import { getInheritedProjectFolders, readProjectFilterConfig, renderProjectFilterSettings, withInheritedProjectFolders } from "../services/project-filter";
 import { renderEmpty } from "./widget-api";
 
 const { Setting } = require("obsidian");
@@ -21,13 +22,13 @@ export const tasksWidget = {
   },
   defaultState: {},
   async render(container, api) {
-    const filter = readProjectFilterConfig(api.widgetData.config, {
+    const filter = readProjectFilterConfig(withInheritedProjectFolders(api.widgetData.config, api.settings), {
       folders: DEFAULT_TASK_FOLDERS,
       namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
     });
     const tasks = api.snapshot.getOpenTasks(filter, Number(api.widgetData.config.limit) || 12);
     if (!tasks.length) {
-      renderEmpty(container, "No open tasks found for this filter.");
+      renderEmpty(container, t(api.language, "noOpenTasks"));
       return;
     }
     const list = container.createDiv({ cls: "yh-task-list" });
@@ -45,18 +46,18 @@ export const tasksWidget = {
       });
     }
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
     renderProjectFilterSettings(container, draft, {
-      folders: DEFAULT_TASK_FOLDERS,
+      folders: getInheritedProjectFolders(ctx.settings, DEFAULT_TASK_FOLDERS),
       namePrefixes: DEFAULT_PROJECT_NAME_PREFIXES
-    });
-    new Setting(container).setName("Limit").addText((text) => {
+    }, ctx.language);
+    new Setting(container).setName(t(ctx.language, "limit")).addText((text) => {
       text.setValue(String(draft.limit || 12));
       text.onChange((value) => {
         draft.limit = Number(value) || 12;

@@ -12,6 +12,7 @@ export class SetupWizardModal extends Modal {
   step: number = 1;
   totalSteps: number = 4;
   config: Record<string, LooseValue> = {
+    language: "en",
     profileName: "My Homepage",
     projectsPath: "",
     areasPath: "",
@@ -21,7 +22,12 @@ export class SetupWizardModal extends Modal {
     enableTechTree: true
   };
 
-  constructor(app: LooseValue, plugin: LooseValue) { super(app); this.plugin = plugin; }
+  constructor(app: LooseValue, plugin: LooseValue) {
+    super(app);
+    this.plugin = plugin;
+    this.config.language = plugin.language;
+    this.config.profileName = plugin.t("myHomepage");
+  }
 
   onOpen(): void {
     this.modalEl.addClass("yh-setup-wizard");
@@ -33,7 +39,7 @@ export class SetupWizardModal extends Modal {
     contentEl.empty();
     contentEl.addClass("yh-modal", "yh-setup-modal");
     contentEl.createDiv({ cls: "yh-setup-indicator" })
-      .createSpan({ text: `Step ${this.step} of ${this.totalSteps}` });
+      .createSpan({ text: this.plugin.t("setupStep", { step: this.step, total: this.totalSteps }) });
     const steps: Record<number, (c: HTMLElement) => void> = {
       1: this.renderStep1, 2: this.renderStep2,
       3: this.renderStep3, 4: this.renderStep4
@@ -42,26 +48,42 @@ export class SetupWizardModal extends Modal {
   }
 
   renderStep1(container: HTMLElement): void {
-    container.createEl("h2", { text: "Welcome!" });
+    container.createEl("h2", { text: this.plugin.t("setupWelcome") });
     container.createDiv({ cls: "yh-setup-desc",
-      text: "Set up your homepage. Everything can be changed later in Settings." });
-    new Setting(container).setName("Homepage name")
-      .setDesc("This appears at the top of your homepage.")
+      text: this.plugin.t("setupWelcomeDesc") });
+    new Setting(container).setName(this.plugin.t("language"))
+      .setDesc(this.plugin.t("languageDesc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("en", this.plugin.t("english"));
+        dropdown.addOption("zh-CN", this.plugin.t("simplifiedChinese"));
+        dropdown.setValue(this.config.language);
+        dropdown.onChange(async (value) => {
+          const hadDefaultName = this.config.profileName === "My Homepage" || this.config.profileName === "我的首页";
+          this.config.language = value;
+          this.plugin.data.settings.language = value;
+          await this.plugin.persist();
+          this.plugin.updatePersistentUiLanguage?.();
+          if (hadDefaultName) this.config.profileName = this.plugin.t("myHomepage");
+          this.renderStep();
+        });
+      });
+    new Setting(container).setName(this.plugin.t("homepageName"))
+      .setDesc(this.plugin.t("homepageNameDesc"))
       .addText((text) => {
         text.setValue(this.config.profileName);
-        text.onChange((v) => { this.config.profileName = v.trim() || "My Homepage"; });
+        text.onChange((v) => { this.config.profileName = v.trim() || this.plugin.t("myHomepage"); });
       });
     this.renderFooter(container, false);
   }
 
   renderStep2(container: HTMLElement): void {
-    container.createEl("h2", { text: "Project folder" });
+    container.createEl("h2", { text: this.plugin.t("setupProjectFolder") });
     container.createDiv({ cls: "yh-setup-desc",
-      text: "Where does your vault store project notes? Examples: Projects/, 10_Projects/" });
-    new Setting(container).setName("Projects folder")
-      .setDesc("Vault-relative path. Leave blank to skip.")
+      text: this.plugin.t("setupProjectFolderDesc") });
+    new Setting(container).setName(this.plugin.t("projectsFolder"))
+      .setDesc(this.plugin.t("vaultPathOptional"))
       .addText((text) => {
-        text.setPlaceholder("e.g. Projects/, 10_Projects/");
+        text.setPlaceholder(this.plugin.t("projectsFolderPlaceholder"));
         text.setValue(this.config.projectsPath);
         text.onChange((v) => { this.config.projectsPath = v.trim(); });
       });
@@ -69,13 +91,13 @@ export class SetupWizardModal extends Modal {
   }
 
   renderStep3(container: HTMLElement): void {
-    container.createEl("h2", { text: "Areas folder" });
+    container.createEl("h2", { text: this.plugin.t("setupAreaFolder") });
     container.createDiv({ cls: "yh-setup-desc",
-      text: "Tech Tree uses notes in this folder that have value/* tags. Examples: 20_Areas, Areas/" });
-    new Setting(container).setName("Areas folder")
-      .setDesc("Vault-relative path. Leave blank to skip the Tech Tree.")
+      text: this.plugin.t("setupAreaFolderDesc") });
+    new Setting(container).setName(this.plugin.t("areasFolder"))
+      .setDesc(this.plugin.t("vaultPathTechTreeOptional"))
       .addText((text) => {
-        text.setPlaceholder("e.g. 20_Areas");
+        text.setPlaceholder(this.plugin.t("areasFolderPlaceholder"));
         text.setValue(this.config.areasPath);
         text.onChange((v) => { this.config.areasPath = v.trim(); });
       });
@@ -83,16 +105,16 @@ export class SetupWizardModal extends Modal {
   }
 
   renderStep4(container: HTMLElement): void {
-    container.createEl("h2", { text: "Choose widgets" });
+    container.createEl("h2", { text: this.plugin.t("chooseWidgets") });
     container.createDiv({ cls: "yh-setup-desc",
-      text: "Enable the widgets you want. You can add or remove them later." });
-    new Setting(container).setName("Tasks").setDesc("Show open tasks from project notes.")
+      text: this.plugin.t("chooseWidgetsDesc") });
+    new Setting(container).setName(this.plugin.t("widgetTasks")).setDesc(this.plugin.t("setupTasksDesc"))
       .addToggle((t) => { t.setValue(this.config.enableTasks); t.onChange((v) => { this.config.enableTasks = v; }); });
-    new Setting(container).setName("Projects").setDesc("Show recent project notes.")
+    new Setting(container).setName(this.plugin.t("widgetProjects")).setDesc(this.plugin.t("setupProjectsDesc"))
       .addToggle((t) => { t.setValue(this.config.enableProjects); t.onChange((v) => { this.config.enableProjects = v; }); });
-    new Setting(container).setName("Habits").setDesc("Track daily habits.")
+    new Setting(container).setName(this.plugin.t("widgetHabits")).setDesc(this.plugin.t("setupHabitsDesc"))
       .addToggle((t) => { t.setValue(this.config.enableHabits); t.onChange((v) => { this.config.enableHabits = v; }); });
-    new Setting(container).setName("Tech Tree").setDesc("Visual capability map: Value → Area → Project.")
+    new Setting(container).setName(this.plugin.t("widgetTechTree")).setDesc(this.plugin.t("setupTechTreeDesc"))
       .addToggle((t) => { t.setValue(this.config.enableTechTree); t.onChange((v) => { this.config.enableTechTree = v; }); });
     this.renderFooter(container, true);
   }
@@ -100,10 +122,13 @@ export class SetupWizardModal extends Modal {
   renderFooter(container: HTMLElement, isLast: boolean): void {
     const footer = container.createDiv({ cls: "yh-modal-footer" });
     if (this.step > 1) {
-      const backBtn = footer.createEl("button", { cls: "yh-modal-cancel", text: "Back" });
+      const backBtn = footer.createEl("button", { cls: "yh-modal-cancel", text: this.plugin.t("back") });
       backBtn.addEventListener("click", () => { this.step -= 1; this.renderStep(); });
     }
-    const primary = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: isLast ? "Finish" : "Next" });
+    const primary = footer.createEl("button", {
+      cls: "mod-cta yh-modal-save",
+      text: this.plugin.t(isLast ? "finish" : "next")
+    });
     primary.addEventListener("click", async () => {
       if (isLast) { await this.finish(); }
       else { this.step += 1; this.renderStep(); }
@@ -113,21 +138,28 @@ export class SetupWizardModal extends Modal {
   async finish(): Promise<void> {
     const data = this.plugin.data;
     data.initialized = true;
+    data.settings.language = this.config.language;
     data.settings.profileName = this.config.profileName;
 
     const projectsPath = normalizePath(this.config.projectsPath || "");
     if (projectsPath) {
       data.settings.techTreeActiveProjectRoot = projectsPath;
       for (const widget of data.layout.widgets) {
-        if (widget.type === "projects" || widget.type === "tasks") {
-          const slot = data.widgets[widget.id];
-          if (slot) slot.config.projectFolders = [projectsPath];
-        }
+        if (widget.type !== "tech-tree") continue;
+        const slot = data.widgets[widget.id];
+        if (slot) slot.config.projectFolders = [];
       }
     }
 
     const areasPath = normalizePath(this.config.areasPath || "");
-    if (areasPath) data.settings.techTreeAreaRoot = areasPath;
+    if (areasPath) {
+      data.settings.techTreeAreaRoot = areasPath;
+      for (const widget of data.layout.widgets) {
+        if (widget.type !== "tech-tree") continue;
+        const slot = data.widgets[widget.id];
+        if (slot) slot.config.areaRoot = "";
+      }
+    }
 
     const disabledTypes: string[] = [];
     if (!this.config.enableTasks) disabledTypes.push("tasks");
@@ -150,7 +182,7 @@ export class SetupWizardModal extends Modal {
     data.settings = this.plugin.normalizeData(data).settings;
     await this.plugin.persist();
     this.plugin.refreshOpenViews();
-    new Notice("Homepage setup complete!");
+    new Notice(this.plugin.t("setupComplete"));
     this.close();
   }
 }

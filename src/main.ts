@@ -13,12 +13,13 @@ import { getGridRows, packLayout, sortLayoutForReadingOrder } from "./layout/pac
 import { buildResponsiveLayout, getResponsiveColumnCount } from "./layout/responsive-layout";
 import { getResponsiveSpanClasses } from "./layout/responsive-classes";
 import { applySizePreset, toSizePreset } from "./layout/size-presets";
-import { normalizeLanguage, t } from "./i18n";
+import { normalizeLanguage, t, widgetName, widgetTitle } from "./i18n";
 import { SnapshotBuilder } from "./services/snapshot-builder";
 import { ManualTimeRecordModal } from "./services/time/ManualTimeRecordModal";
 import { TimeLogListModal } from "./services/time/TimeLogListModal";
 import { TimeAggregation } from "./services/time/TimeAggregation";
 import { TimeLogService } from "./services/time/TimeLogService";
+import { withInheritedAreaFolders, withInheritedProjectFolders } from "./services/project-filter";
 import { calculateObsidianUsageDays, formatDateKey } from "./services/obsidian-usage";
 import { createWidgetRegistry } from "./widgets/registry";
 import { SetupWizardModal } from "./data/setup-wizard";
@@ -42,7 +43,7 @@ function stripHoverHints(root) {
   root.querySelectorAll("title").forEach((element) => element.remove());
 }
 
-function formatLongDate(date, language = "zh-CN") {
+function formatLongDate(date, language = "en") {
   return date.toLocaleDateString(normalizeLanguage(language), {
     year: "numeric",
     month: "long",
@@ -78,108 +79,14 @@ function normalizeHexColor(value, fallback = "#f5c2e7") {
   return /^#[0-9a-f]{6}$/i.test(text) ? text : fallback;
 }
 
-function hexToRgb(value) {
-  const hex = normalizeHexColor(value).slice(1);
-  return {
-    r: parseInt(hex.slice(0, 2), 16),
-    g: parseInt(hex.slice(2, 4), 16),
-    b: parseInt(hex.slice(4, 6), 16)
-  };
+function isCustomAccent(settings) {
+  return settings?.accentColorMode === "custom";
 }
 
-function rgbaFromHex(value, alpha) {
-  const { r, g, b } = hexToRgb(value);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-class ManageLayoutPresetsModal extends Modal {
-  constructor(app, plugin) {
-    super(app);
-    this.plugin = plugin;
-    this.name = "";
-    this.columns = clampLayoutColumns(plugin.data.layout.columns, 5);
-  }
-
-  onOpen() {
-    this.render();
-  }
-
-  render() {
-    const { contentEl } = this;
-    this.modalEl.addClass("yh-settings-shell");
-    contentEl.empty();
-    contentEl.addClass("yh-modal", "yh-settings-modal");
-    contentEl.createEl("h2", { text: "Manage layouts" });
-
-    const saveRow = contentEl.createDiv({ cls: "yh-layout-save-row" });
-    const input = saveRow.createEl("input", {
-      type: "text",
-      placeholder: "Name this layout..."
-    });
-    input.value = this.name;
-    input.addEventListener("input", () => {
-      this.name = input.value;
-    });
-    const columns = saveRow.createEl("select");
-    for (let value = 1; value <= 5; value += 1) {
-      columns.createEl("option", { value: String(value), text: `${value} cols` });
-    }
-    columns.value = String(this.columns);
-    columns.addEventListener("change", () => {
-      this.columns = clampLayoutColumns(columns.value, 5);
-    });
-    const save = saveRow.createEl("button", { cls: "mod-cta", text: "Save" });
-    save.addEventListener("click", async () => {
-      const saved = await this.plugin.saveCurrentLayoutPreset(this.name, this.columns);
-      this.name = "";
-      new Notice(`HomePulse layout saved: ${saved.name}.`);
-      this.render();
-    });
-
-    const list = contentEl.createDiv({ cls: "yh-layout-list" });
-    for (const preset of this.plugin.getLayoutPresets()) {
-      const row = list.createDiv({ cls: "yh-layout-row" });
-      const info = row.createDiv({ cls: "yh-layout-info" });
-      const title = info.createDiv({ cls: "yh-layout-title" });
-      title.createSpan({ text: preset.name });
-      if (preset.id === this.plugin.data.defaultLayoutPresetId) {
-        title.createSpan({ cls: "yh-layout-current", text: "Current" });
-      }
-      info.createDiv({
-        cls: "yh-layout-meta",
-        text: `${preset.layout.columns || 5} columns${preset.updatedAt ? ` · modified ${this.formatRelativeTime(preset.updatedAt)}` : ""}`
-      });
-
-      const actions = row.createDiv({ cls: "yh-layout-actions" });
-      const load = actions.createEl("button", { text: "Load" });
-      load.addEventListener("click", async () => {
-        await this.plugin.loadLayoutPreset(preset.id);
-        new Notice(`HomePulse layout loaded: ${preset.name}.`);
-        this.render();
-      });
-      if (!preset.isBuiltIn) {
-        const remove = actions.createEl("button", { cls: "yh-icon-btn danger", text: "×" });
-        remove.addEventListener("click", async () => {
-          await this.plugin.deleteLayoutPreset(preset.id);
-          new Notice(`HomePulse layout deleted: ${preset.name}.`);
-          this.render();
-        });
-      }
-    }
-  }
-
-  formatRelativeTime(timestamp) {
-    const age = Date.now() - Number(timestamp || 0);
-    if (!Number.isFinite(age) || age < 0) return "just now";
-    const minutes = Math.floor(age / 60000);
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes} minutes ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hours ago`;
-    const days = Math.floor(hours / 24);
-    if (days < 365) return `${days} days ago`;
-    return `${Math.floor(days / 365)} years ago`;
-  }
+function getAccentCssValue(settings) {
+  return isCustomAccent(settings)
+    ? normalizeHexColor(settings.accentColor)
+    : "var(--interactive-accent, #f5c2e7)";
 }
 
 class LayoutManagerModal extends Modal {
@@ -228,7 +135,7 @@ class LayoutManagerModal extends Modal {
       const row = list.createDiv({ cls: "yh-layout-row" });
       const info = row.createDiv({ cls: "yh-layout-info" });
       const title = info.createDiv({ cls: "yh-layout-title" });
-      title.createSpan({ text: preset.name });
+      title.createSpan({ text: this.plugin.getLayoutPresetDisplayName(preset) });
       if (preset.id === this.plugin.data.defaultLayoutPresetId) {
         title.createSpan({ cls: "yh-layout-current", text: this.plugin.t("current") });
       }
@@ -240,7 +147,7 @@ class LayoutManagerModal extends Modal {
       const load = actions.createEl("button", { text: this.plugin.t("load") });
       load.addEventListener("click", async () => {
         await this.plugin.loadLayoutPreset(preset.id);
-        new Notice(this.plugin.t("layoutLoaded", { name: preset.name }));
+        new Notice(this.plugin.t("layoutLoaded", { name: this.plugin.getLayoutPresetDisplayName(preset) }));
         this.render();
       });
       if (!preset.isBuiltIn) {
@@ -298,8 +205,8 @@ class AddWidgetModal extends Modal {
     const grid = contentEl.createDiv({ cls: "yh-modal-grid" });
     for (const definition of this.plugin.registry) {
       const button = grid.createEl("button", { cls: "yh-widget-picker" });
-      button.createDiv({ cls: "yh-widget-picker-title", text: definition.displayName });
-      button.createDiv({ cls: "yh-widget-picker-meta", text: this.plugin.language === "en" ? "Resizable · 1-5 columns · 1-5 rows" : "可调整大小 · 1-5 列 · 1-5 行" });
+      button.createDiv({ cls: "yh-widget-picker-title", text: widgetName(this.plugin.language, definition.type, definition.displayName) });
+      button.createDiv({ cls: "yh-widget-picker-meta", text: this.plugin.t("addWidgetMeta") });
       button.addEventListener("click", () => {
         this.onPick(definition.type);
         this.close();
@@ -317,6 +224,9 @@ class WidgetSettingsModal extends Modal {
     this.definition = definition;
     this.onSave = onSave;
     this.draft = deepClone(widgetData.config);
+    if (Object.prototype.hasOwnProperty.call(this.draft, "title")) {
+      this.draft.title = widgetTitle(plugin.language, definition.type, this.draft.title, definition.displayName);
+    }
   }
 
   onOpen() {
@@ -324,21 +234,28 @@ class WidgetSettingsModal extends Modal {
     this.modalEl.addClass("yh-settings-shell");
     contentEl.empty();
     contentEl.addClass("yh-modal", "yh-settings-modal");
-    contentEl.createEl("h2", { text: `${this.definition.displayName} settings` });
+    contentEl.createEl("h2", {
+      text: this.plugin.t("widgetSettings", {
+        name: widgetName(this.plugin.language, this.definition.type, this.definition.displayName)
+      })
+    });
     contentEl.createDiv({
       cls: "yh-settings-subtitle",
-      text: "Configure this widget's content and display."
+      text: this.plugin.t("widgetSettingsDesc")
     });
     const body = contentEl.createDiv({ cls: "yh-settings-body" });
     this.definition.renderSettings(body, this.draft, {
       app: this.app,
       state: this.widgetData.state,
-      config: this.widgetData.config
+      config: this.widgetData.config,
+      settings: this.plugin.data.settings,
+      language: this.plugin.language,
+      t: (key, vars = {}) => this.plugin.t(key, vars)
     });
 
     const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
-    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
-    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: "Save" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: this.plugin.t("cancel") });
+    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: this.plugin.t("save") });
     cancel.addEventListener("click", () => this.close());
     save.addEventListener("click", async () => {
       await this.onSave(this.draft);
@@ -356,47 +273,70 @@ class HeaderSettingsModal extends Modal {
   onOpen() {
     const { contentEl } = this;
     this.modalEl.addClass("yh-dashboard-settings-shell", "yh-settings-shell");
+    this.modalEl.style.setProperty("--yh-modal-accent", getAccentCssValue(this.plugin.data.settings));
     contentEl.empty();
     contentEl.addClass("yh-modal", "yh-settings-modal", "yh-dashboard-settings-modal");
-    contentEl.createEl("h2", { text: "Header settings" });
+    contentEl.createEl("h2", { text: this.plugin.t("headerSettings") });
     contentEl.createDiv({
       cls: "yh-settings-subtitle yh-dashboard-settings-subtitle",
-      text: "Identity and usage details shown in the homepage header."
+      text: this.plugin.t("headerSettingsDesc")
     });
 
     const draft = {
-      profileName: this.plugin.data.settings.profileName || "Your name",
+      profileName: this.plugin.data.settings.profileName || this.plugin.t("yourName"),
       profileSignature: this.plugin.data.settings.profileSignature || "",
+      accentColorMode: isCustomAccent(this.plugin.data.settings) ? "custom" : "theme",
       accentColor: normalizeHexColor(this.plugin.data.settings.accentColor),
       obsidianStartDate: this.plugin.data.settings.obsidianStartDate || "",
       lockHomepage: Boolean(this.plugin.data.settings.lockHomepage)
     };
     const body = contentEl.createDiv({ cls: "yh-settings-body" });
 
-    new Setting(body).setName("Username").addText((text) => {
+    new Setting(body).setName(this.plugin.t("username")).addText((text) => {
       text.setValue(draft.profileName);
       text.onChange((value) => {
         draft.profileName = value;
       });
     });
 
-    new Setting(body).setName("Signature").addText((text) => {
+    new Setting(body).setName(this.plugin.t("signature")).addText((text) => {
       text.setValue(draft.profileSignature);
       text.onChange((value) => {
         draft.profileSignature = value;
       });
     });
 
-    const accentSetting = new Setting(body)
-      .setName("Theme color")
-      .setDesc("Choose the homepage accent color, or enter a #RRGGBB value.");
+    let accentSetting = null;
     let accentPicker = null;
     let accentText = null;
+    const updateAccentControlState = () => {
+      if (!accentSetting) return;
+      accentSetting.settingEl.style.display = draft.accentColorMode === "custom" ? "" : "none";
+    };
+    new Setting(body)
+      .setName(this.plugin.t("accentMode"))
+      .setDesc(this.plugin.t("accentModeDesc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("theme", this.plugin.t("followObsidianTheme"));
+        dropdown.addOption("custom", this.plugin.t("useCustomAccent"));
+        dropdown.setValue(draft.accentColorMode);
+        dropdown.onChange((value) => {
+          draft.accentColorMode = value === "custom" ? "custom" : "theme";
+          this.modalEl.style.setProperty("--yh-modal-accent", draft.accentColorMode === "custom" ? draft.accentColor : "var(--interactive-accent, #f5c2e7)");
+          updateAccentControlState();
+        });
+      });
+    accentSetting = new Setting(body)
+      .setName(this.plugin.t("accentColor"))
+      .setDesc(this.plugin.t("accentColorDesc"));
     const syncAccentControls = (value) => {
       const next = normalizeHexColor(value, draft.accentColor);
+      draft.accentColorMode = "custom";
       draft.accentColor = next;
+      this.modalEl.style.setProperty("--yh-modal-accent", next);
       if (accentPicker && accentPicker.getValue() !== next) accentPicker.setValue(next);
       if (accentText && accentText.getValue() !== next) accentText.setValue(next);
+      updateAccentControlState();
     };
     accentSetting.addText((text) => {
       accentPicker = text;
@@ -414,10 +354,11 @@ class HeaderSettingsModal extends Modal {
         syncAccentControls(value);
       });
     });
+    updateAccentControlState();
 
     new Setting(body)
-      .setName("Lock homepage tab")
-      .setDesc("Keep this homepage pinned so other notes always open elsewhere.")
+      .setName(this.plugin.t("lockHomepageTab"))
+      .setDesc(this.plugin.t("lockHomepageModalDesc"))
       .addToggle((toggle) => {
         toggle.setValue(draft.lockHomepage);
         toggle.onChange((value) => {
@@ -426,8 +367,8 @@ class HeaderSettingsModal extends Modal {
       });
 
     const usageSetting = new Setting(body)
-      .setName("Obsidian start date")
-      .setDesc("Choose the first day you used Obsidian. The start day counts as day one.");
+      .setName(this.plugin.t("obsidianStartDate"))
+      .setDesc(this.plugin.t("obsidianStartDateModalDesc"));
     usageSetting.settingEl.addClass("yh-start-date-setting");
     usageSetting.addText((text) => {
       text.inputEl.type = "date";
@@ -436,14 +377,14 @@ class HeaderSettingsModal extends Modal {
       const updateDescription = (value) => {
         const days = calculateObsidianUsageDays(value, new Date());
         usageSetting.descEl.setText(
-          days === null ? "Choose a date to enable the usage counter." : `Today is day ${days}.`
+          days === null ? this.plugin.t("chooseStartDateShort") : this.plugin.t("todayIsDayShort", { count: days })
         );
       };
       updateDescription(draft.obsidianStartDate);
       text.onChange((value) => {
         const next = value.trim();
         if (next && calculateObsidianUsageDays(next, new Date()) === null) {
-          new Notice("Choose a valid date that is not in the future.");
+          new Notice(this.plugin.t("invalidStartDate"));
           text.setValue(draft.obsidianStartDate);
           return;
         }
@@ -453,12 +394,13 @@ class HeaderSettingsModal extends Modal {
     });
 
     const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
-    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: "Cancel" });
-    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: "Save" });
+    const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: this.plugin.t("cancel") });
+    const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: this.plugin.t("save") });
     cancel.addEventListener("click", () => this.close());
     save.addEventListener("click", async () => {
       this.plugin.data.settings.profileName = draft.profileName.trim() || "Your name";
       this.plugin.data.settings.profileSignature = draft.profileSignature.trim();
+      this.plugin.data.settings.accentColorMode = draft.accentColorMode;
       this.plugin.data.settings.accentColor = normalizeHexColor(draft.accentColor);
       this.plugin.data.settings.obsidianStartDate = draft.obsidianStartDate;
       this.plugin.data.settings.lockHomepage = draft.lockHomepage;
@@ -487,8 +429,24 @@ class YukiHomepageSettingTab extends PluginSettingTab {
       .setHeading();
 
     new Setting(containerEl)
-      .setName("Open on startup")
-      .setDesc("Keep the homepage available when Obsidian opens, without replacing the active work tab.")
+      .setName(this.plugin.t("language"))
+      .setDesc(this.plugin.t("languageDesc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("en", this.plugin.t("english"));
+        dropdown.addOption("zh-CN", this.plugin.t("simplifiedChinese"));
+        dropdown.setValue(this.plugin.language);
+        dropdown.onChange(async (value) => {
+          this.plugin.data.settings.language = normalizeLanguage(value);
+          await this.plugin.persist();
+          this.plugin.updatePersistentUiLanguage();
+          this.plugin.refreshOpenViews();
+          this.display();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(this.plugin.t("openOnStartup"))
+      .setDesc(this.plugin.t("openOnStartupDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.data.settings.openOnStartup);
         toggle.onChange(async (value) => {
@@ -498,8 +456,8 @@ class YukiHomepageSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Lock homepage tab")
-      .setDesc("Pin the homepage so opening notes cannot replace it. The sidebar button will always return to this tab.")
+      .setName(this.plugin.t("lockHomepageTab"))
+      .setDesc(this.plugin.t("lockHomepageTabDesc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.data.settings.lockHomepage);
         toggle.onChange(async (value) => {
@@ -512,32 +470,49 @@ class YukiHomepageSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Accent color")
-      .setDesc("Choose the homepage highlight color. Use a #RRGGBB value.")
-      .addText((text) => {
-        text.inputEl.type = "color";
-        text.setValue(normalizeHexColor(this.plugin.data.settings.accentColor));
-        text.onChange(async (value) => {
-          this.plugin.data.settings.accentColor = normalizeHexColor(value);
+      .setName(this.plugin.t("accentMode"))
+      .setDesc(this.plugin.t("accentModeDesc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("theme", this.plugin.t("followObsidianTheme"));
+        dropdown.addOption("custom", this.plugin.t("useCustomAccent"));
+        dropdown.setValue(isCustomAccent(this.plugin.data.settings) ? "custom" : "theme");
+        dropdown.onChange(async (value) => {
+          this.plugin.data.settings.accentColorMode = value === "custom" ? "custom" : "theme";
           await this.plugin.persist();
           this.plugin.refreshOpenViews();
-        });
-      })
-      .addText((text) => {
-        text.setPlaceholder("#f5c2e7");
-        text.setValue(normalizeHexColor(this.plugin.data.settings.accentColor));
-        text.onChange(async (value) => {
-          const next = normalizeHexColor(value, this.plugin.data.settings.accentColor);
-          this.plugin.data.settings.accentColor = next;
-          text.setValue(next);
-          await this.plugin.persist();
-          this.plugin.refreshOpenViews();
+          this.display();
         });
       });
 
+    if (isCustomAccent(this.plugin.data.settings)) {
+      new Setting(containerEl)
+        .setName(this.plugin.t("accentColor"))
+        .setDesc(this.plugin.t("accentColorDesc"))
+        .addText((text) => {
+          text.inputEl.type = "color";
+          text.setValue(normalizeHexColor(this.plugin.data.settings.accentColor));
+          text.onChange(async (value) => {
+            this.plugin.data.settings.accentColor = normalizeHexColor(value);
+            await this.plugin.persist();
+            this.plugin.refreshOpenViews();
+          });
+        })
+        .addText((text) => {
+          text.setPlaceholder("#f5c2e7");
+          text.setValue(normalizeHexColor(this.plugin.data.settings.accentColor));
+          text.onChange(async (value) => {
+            const next = normalizeHexColor(value, this.plugin.data.settings.accentColor);
+            this.plugin.data.settings.accentColor = next;
+            text.setValue(next);
+            await this.plugin.persist();
+            this.plugin.refreshOpenViews();
+          });
+        });
+    }
+
     const usageSetting = new Setting(containerEl)
-      .setName("Obsidian start date")
-      .setDesc("Set the first day you started using Obsidian. The homepage counts from this date through today.");
+      .setName(this.plugin.t("obsidianStartDate"))
+      .setDesc(this.plugin.t("obsidianStartDateDesc"));
     usageSetting.settingEl.addClass("yh-start-date-setting");
     usageSetting.addText((text) => {
       const currentValue = this.plugin.data.settings.obsidianStartDate || "";
@@ -548,15 +523,15 @@ class YukiHomepageSettingTab extends PluginSettingTab {
         const days = calculateObsidianUsageDays(value, new Date());
         usageSetting.descEl.setText(
           days === null
-            ? "Choose a start date to show an accurate usage duration on the homepage."
-            : `Counting the start day, today is day ${days}.`
+            ? this.plugin.t("chooseStartDate")
+            : this.plugin.t("todayIsDay", { count: days })
         );
       };
       updateDescription(currentValue);
       text.onChange(async (value) => {
         const next = value.trim();
         if (next && calculateObsidianUsageDays(next, new Date()) === null) {
-          new Notice("Choose a valid date that is not in the future.");
+          new Notice(this.plugin.t("invalidStartDate"));
           text.setValue(this.plugin.data.settings.obsidianStartDate || "");
           return;
         }
@@ -568,26 +543,26 @@ class YukiHomepageSettingTab extends PluginSettingTab {
     });
 
     new Setting(containerEl)
-      .setName("Tech tree Area folder")
-      .setDesc("Vault-relative folder containing Area notes linked by value/* tags.")
+      .setName(this.plugin.t("techTreeAreaFolder"))
+      .setDesc(this.plugin.t("techTreeAreaFolderDesc"))
       .addText((text) => {
-        text.setPlaceholder("20_Areas");
-        text.setValue(this.plugin.data.settings.techTreeAreaRoot || "20_Areas");
+        text.setPlaceholder("Areas");
+        text.setValue(this.plugin.data.settings.techTreeAreaRoot || "Areas");
         text.onChange(async (value) => {
-          this.plugin.data.settings.techTreeAreaRoot = value.trim() || "20_Areas";
+          this.plugin.data.settings.techTreeAreaRoot = value.trim() || "Areas";
           await this.plugin.persist();
           this.plugin.refreshOpenViews();
         });
       });
 
     new Setting(containerEl)
-      .setName("Tech tree active-project folder")
-      .setDesc("Vault-relative folder whose Project_* notes are treated as active.")
+      .setName(this.plugin.t("techTreeProjectFolder"))
+      .setDesc(this.plugin.t("techTreeProjectFolderDesc"))
       .addText((text) => {
-        text.setPlaceholder("10_Projects/进行中");
-        text.setValue(this.plugin.data.settings.techTreeActiveProjectRoot || "10_Projects/进行中");
+        text.setPlaceholder("Projects");
+        text.setValue(this.plugin.data.settings.techTreeActiveProjectRoot || "Projects");
         text.onChange(async (value) => {
-          this.plugin.data.settings.techTreeActiveProjectRoot = value.trim() || "10_Projects/进行中";
+          this.plugin.data.settings.techTreeActiveProjectRoot = value.trim() || "Projects";
           await this.plugin.persist();
           this.plugin.refreshOpenViews();
         });
@@ -686,27 +661,26 @@ class YukiHomepageView extends ItemView {
     const container = this.contentEl;
     container.empty();
     container.addClass("yh-view");
-    const accentColor = normalizeHexColor(this.plugin.data.settings.accentColor);
+    const accentColor = getAccentCssValue(this.plugin.data.settings);
     container.style.setProperty("--yh-accent", accentColor);
-    container.style.setProperty("--yh-accent-rgb", `${hexToRgb(accentColor).r}, ${hexToRgb(accentColor).g}, ${hexToRgb(accentColor).b}`);
     container.style.setProperty("--komo-sakura", accentColor);
-    container.style.setProperty("--komo-border-sakura", rgbaFromHex(accentColor, 0.26));
+    container.style.setProperty("--komo-border-sakura", "color-mix(in srgb, var(--yh-accent) 26%, transparent)");
 
     const frame = container.createDiv({ cls: "yh-frame" });
-    const loading = frame.createDiv({ cls: "yh-loading", text: "Loading widgets..." });
+    const loading = frame.createDiv({ cls: "yh-loading", text: this.plugin.t("loadingWidgets") });
     const snapshot = await new SnapshotBuilder(this.app, this.plugin).load();
     if (token !== this.renderToken) return;
     loading.remove();
 
     const header = frame.createDiv({ cls: `yh-header ${this.editMode ? "is-editing" : ""}` });
     const brand = header.createDiv({ cls: "yh-brand" });
-    brand.createDiv({ cls: "yh-brand-title", text: this.plugin.data.settings.profileName || "Your name" });
+    brand.createDiv({ cls: "yh-brand-title", text: this.plugin.data.settings.profileName || this.plugin.t("yourName") });
     brand.createDiv({ cls: "yh-brand-subtitle", text: this.plugin.data.settings.profileSignature || "" });
     if (snapshot.obsidianDays != null) {
       const usage = brand.createDiv({ cls: "yh-brand-usage" });
-      usage.createSpan({ text: "你已使用 Obsidian " });
+      usage.createSpan({ text: this.plugin.t("usingObsidianFor") });
       usage.createSpan({ cls: "yh-brand-usage-days", text: String(snapshot.obsidianDays) });
-      usage.createSpan({ text: " 天" });
+      usage.createSpan({ text: this.plugin.t(snapshot.obsidianDays === 1 ? "day" : "days") });
     }
 
     const clockBlock = header.createDiv({ cls: "yh-clock-block" });
@@ -717,7 +691,7 @@ class YukiHomepageView extends ItemView {
     const periodEl = periodRow.createDiv({ cls: "yh-period" });
     const configBtn = periodRow.createEl("button", {
       cls: `yh-header-config-btn ${this.editMode ? "is-active" : ""}`,
-      text: this.editMode ? "⚙ editing" : "⚙ config"
+      text: `⚙ ${this.plugin.t(this.editMode ? "editing" : "config")}`
     });
     const dateEl = rightHdr.createDiv({ cls: "yh-date" });
 
@@ -730,13 +704,13 @@ class YukiHomepageView extends ItemView {
       const now = new Date();
       const hour = now.getHours();
       const period = hour < 5 || hour >= 22
-        ? "NIGHT /"
+        ? this.plugin.t("periodNight")
         : hour < 12
-          ? "MORNING /"
+          ? this.plugin.t("periodMorning")
           : hour < 18
-            ? "AFTERNOON /"
-            : "EVENING /";
-      timeEl.setText(now.toLocaleTimeString("zh-CN", { hour12: false }));
+            ? this.plugin.t("periodAfternoon")
+            : this.plugin.t("periodEvening");
+      timeEl.setText(now.toLocaleTimeString(this.plugin.language === "en" ? "en-US" : "zh-CN", { hour12: false }));
       dateEl.setText(`${formatLongDate(now, this.plugin.language)} · ${now.toLocaleDateString(this.plugin.language === "en" ? "en-US" : "zh-CN", { month: "short", day: "numeric", year: "numeric" })}`);
       periodEl.setText(period);
     };
@@ -763,7 +737,7 @@ class YukiHomepageView extends ItemView {
           : this.plugin.t("layoutEditingResize", { count: layoutColumns })
       });
       const actions = toolbar.createDiv({ cls: "yh-toolbar-actions" });
-      const headerSettingsBtn = actions.createEl("button", { text: "Header settings" });
+      const headerSettingsBtn = actions.createEl("button", { text: this.plugin.t("headerSettings") });
       const addBtn = actions.createEl("button", { text: this.plugin.t("addWidget") });
       const manageLayoutBtn = actions.createEl("button", { text: this.plugin.t("manageLayouts") });
       headerSettingsBtn.addEventListener("click", () => {
@@ -889,7 +863,10 @@ class YukiHomepageView extends ItemView {
       }
 
       const cardHeader = shell.createDiv({ cls: "yh-card-header" });
-      cardHeader.createDiv({ cls: "yh-card-title", text: widgetData.config.title || definition.displayName });
+      cardHeader.createDiv({
+        cls: "yh-card-title",
+        text: widgetTitle(this.plugin.language, widget.type, widgetData.config.title, definition.displayName)
+      });
       if (canEditLayout) {
         const controls = cardHeader.createDiv({ cls: "yh-card-controls" });
         const widthSelect = controls.createEl("select", { cls: "yh-size-select" });
@@ -938,6 +915,9 @@ class YukiHomepageView extends ItemView {
       // on the plugin or view internals.
       const api = {
         app: this.app,
+        language: this.plugin.language,
+        settings: this.plugin.data.settings,
+        t: (key, vars = {}) => this.plugin.t(key, vars),
         component: this,
         widget,
         widgetData,
@@ -979,7 +959,7 @@ class YukiHomepageView extends ItemView {
       try {
         await definition.render(body, api);
       } catch (error) {
-        body.createDiv({ cls: "yh-empty", text: `Widget failed to render: ${error.message}` });
+        body.createDiv({ cls: "yh-empty", text: this.plugin.t("widgetFailed", { message: error.message }) });
       }
     }
     stripHoverHints(frame);
@@ -1014,12 +994,12 @@ class YukiHomepagePlugin extends Plugin {
     this.refreshTimer = 0;
 
     this.registerView(VIEW_TYPE, (leaf) => new YukiHomepageView(leaf, this));
-    this.addRibbonIcon(VIEW_ICON, "Open HomePulse", () => {
+    this.openHomepageRibbonEl = this.addRibbonIcon(VIEW_ICON, this.t("openHomePulse"), () => {
       void this.openHomepage();
     });
-    this.addCommand({
+    this.openHomepageCommand = this.addCommand({
       id: "open-homepulse",
-      name: `Open ${VIEW_NAME}`,
+      name: this.t("openHomePulse"),
       callback: () => {
         void this.openHomepage();
       }
@@ -1107,7 +1087,10 @@ class YukiHomepagePlugin extends Plugin {
   }
 
   getTimeSourceConfig() {
-    return this.getFirstWidgetConfig("pomodoro");
+    return withInheritedAreaFolders(
+      withInheritedProjectFolders(this.getFirstWidgetConfig("pomodoro"), this.data.settings),
+      this.data.settings
+    );
   }
 
   openManualTimeRecordModal() {
@@ -1122,7 +1105,8 @@ class YukiHomepagePlugin extends Plugin {
       () => this.getTimeLogService().query(),
       async (id) => {
         await this.getTimeLogService().delete(id);
-      }
+      },
+      this.language
     ).open();
   }
 
@@ -1175,12 +1159,26 @@ class YukiHomepagePlugin extends Plugin {
       id: preset.id,
       name: preset.name,
       isBuiltIn: Boolean(preset.isBuiltIn),
+      updatedAt: preset.updatedAt,
       layout: deepClone(preset.layout)
     }));
   }
 
+  updatePersistentUiLanguage() {
+    const label = this.t("openHomePulse");
+    if (this.openHomepageCommand) this.openHomepageCommand.name = label;
+    if (this.openHomepageRibbonEl) {
+      this.openHomepageRibbonEl.setAttribute("aria-label", label);
+      this.openHomepageRibbonEl.setAttribute("title", label);
+    }
+  }
+
+  getLayoutPresetDisplayName(preset) {
+    return preset?.id === "public-default" ? this.t("publicDefaultLayout") : preset?.name || this.t("selectedLayout");
+  }
+
   getLayoutPresetName(id) {
-    return this.getLayoutPresets().find((preset) => preset.id === id)?.name || "selected layout";
+    return this.getLayoutPresetDisplayName(this.getLayoutPresets().find((preset) => preset.id === id));
   }
 
   getLayoutPreset(id) {
@@ -1235,12 +1233,13 @@ class YukiHomepagePlugin extends Plugin {
   }
 
   async saveCurrentLayoutAsDefault() {
-    await this.saveCurrentLayoutPreset("Saved default");
+    await this.saveCurrentLayoutPreset(this.t("savedDefaultLayout"));
   }
 
   async saveCurrentLayoutPreset(name, columns = this.data.layout.columns) {
     const trimmed = String(name || "").trim();
-    const presetName = trimmed || `Layout ${new Date().toLocaleString("zh-CN", { hour12: false })}`;
+    const date = new Date().toLocaleString(this.language === "en" ? "en-US" : "zh-CN", { hour12: false });
+    const presetName = trimmed || this.t("defaultLayoutName", { date });
     const presets = this.getLayoutPresets();
     const existing = presets.find((preset) => !preset.isBuiltIn && preset.name === presetName);
     const layoutColumns = clampLayoutColumns(columns, this.data.layout.columns || 5);

@@ -4,6 +4,7 @@ import { DEFAULT_PROJECT_NAME_PREFIXES } from "../../constants";
 import {
   matchesProjectFilter,
   readProjectFilterConfig,
+  toVaultRelativePath,
   type ProjectFilterConfig,
   type ProjectFilterDefaults
 } from "../project-filter";
@@ -117,14 +118,15 @@ function readAreaFilterConfig(config: AreaFilterConfig): Required<ProjectFilterD
     projectTags: config.areaTags,
     projectNamePrefixes: config.areaNamePrefixes
   }, {
-    folders: ["20_Areas"],
+    folders: ["Areas"],
     tags: [],
     namePrefixes: ["Area_"]
   });
 }
 
 function getTaskFile(app: LooseValue, taskFile = QUICK_CAPTURE_PATH): LooseValue | null {
-  return app.vault.getAbstractFileByPath(normalizePath(taskFile || QUICK_CAPTURE_PATH)) || null;
+  const path = toVaultRelativePath(app, taskFile || QUICK_CAPTURE_PATH) || QUICK_CAPTURE_PATH;
+  return app.vault.getAbstractFileByPath(normalizePath(path)) || null;
 }
 
 function inheritedAreaFromProject(app: LooseValue, projectFile: LooseValue, frontmatter: LooseValue): TimeLogTarget | null {

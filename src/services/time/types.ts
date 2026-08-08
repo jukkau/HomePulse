@@ -1,7 +1,7 @@
 import type { TimeLog, TimeLogActivityType, TimeLogSource, TimeLogTargetType } from "../../types";
 
 export const QUICK_CAPTURE_TASK_ID = "QuickCapture" as const;
-export const QUICK_CAPTURE_PATH = "10_Projects/进行中/QuickCapture.md" as const;
+export const QUICK_CAPTURE_PATH = "QuickCapture.md" as const;
 
 export type TimeLogTarget = {
   type: TimeLogTargetType;

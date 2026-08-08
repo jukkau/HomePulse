@@ -11,8 +11,10 @@ import { packLayout, sortLayoutForReadingOrder } from "../src/layout/pack-layout
 import { buildResponsiveLayout, getResponsiveColumnCount } from "../src/layout/responsive-layout";
 import { createWidgetRegistry } from "../src/widgets/registry";
 import { calculateObsidianUsageDays } from "../src/services/obsidian-usage";
-import { countDistinctCompletionDays } from "../src/widgets/widget-api";
+import { countDistinctCompletionDays, shouldPersistPomodoroState } from "../src/widgets/widget-api";
 import { parseBookmarks } from "../src/widgets/bookmarks";
+import { t, widgetName, widgetTitle } from "../src/i18n";
+import { resolveTechTreeProjectFolders } from "../src/widgets/tech-tree";
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -50,7 +52,7 @@ function assert(cond, msg) {
 
 function run() {
   const pluginRoot = path.resolve(__dirname, "..");
-  const dataPath = path.join(pluginRoot, "data.json");
+  const dataPath = process.env.HOMEPULSE_SMOKE_DATA || path.join(pluginRoot, "data.json");
   const raw = JSON.parse(fs.readFileSync(dataPath, "utf8"));
 
   // --- migration only ---
@@ -125,13 +127,63 @@ function run() {
   });
 
   assert(normalized.schemaVersion === CURRENT_SCHEMA_VERSION, "normalized schemaVersion");
+  assert(CURRENT_SCHEMA_VERSION === 3, "schema includes Tech Tree inheritance migration");
   assert(normalized.layout.columns >= 1 && normalized.layout.columns <= 5, "layout columns stay in range");
   assert(normalized.layout.columns === (raw.layout?.columns || 5), "saved layout columns preserved");
   assert(normalized.layoutPresets?.find((preset) => preset.id === "public-default")?.layout.columns === 5, "public default columns fixed to 5");
   assert(normalized.layout.widgets.length > 0, "has widgets");
   assert(Array.isArray(normalized.timeLogs), "normalized timeLogs array");
-  assert(normalized.settings.language === "en", "language defaults to English");
-  assert(/^#[0-9a-f]{6}$/i.test(normalized.settings.accentColor), "accent color is a hex value");
+  assert(["en", "zh-CN"].includes(normalized.settings.language), "saved interface language is supported");
+  const chineseNormalized = normalizeData({
+    ...raw,
+    settings: { ...raw.settings, language: "zh-CN" }
+  }, {
+    mergeDefaults,
+    normalizeArray,
+    randomId,
+    applySizePreset,
+    packLayout,
+    deepClone,
+    getDefinition
+  });
+  assert(chineseNormalized.settings.language === "zh-CN", "Chinese language preference is preserved");
+  assert(t("zh-CN", "manageLayouts") === "管理布局", "Chinese UI dictionary is available");
+  assert(t("en", "manageLayouts") === "Manage layouts", "English UI dictionary is available");
+  assert(widgetName("zh-CN", "time-flow", "Time Flow") === "时间流", "widget names switch to Chinese");
+  assert(widgetTitle("zh-CN", "focus", "today's goal", "Today's goal") === "今日目标", "built-in widget titles switch language");
+  assert(widgetTitle("zh-CN", "focus", "Deep work", "Today's goal") === "Deep work", "custom widget titles are preserved");
+  assert(resolveTechTreeProjectFolders({ projectFolders: [] }, "Client/Projects").join("|") === "Client/Projects", "Tech Tree inherits the global project folder");
+  assert(resolveTechTreeProjectFolders({ projectFolders: ["Archive/Projects"] }, "Client/Projects").join("|") === "Archive/Projects", "Tech Tree keeps an explicit project folder override");
+  const migratedTechTree = migrateToLatest({
+    schemaVersion: 2,
+    initialized: true,
+    settings: { techTreeActiveProjectRoot: "Client/Projects" },
+    layout: { widgets: [{ id: "tree", type: "tech-tree" }] },
+    widgets: { tree: { config: { projectFolders: ["10_Projects/进行中"] }, state: {} } }
+  });
+  assert(migratedTechTree.widgets.tree.config.projectFolders.length === 0, "legacy Tech Tree folder inherits configured global root");
+  assert(!normalized.settings.accentColor || /^#[0-9a-f]{6}$/i.test(normalized.settings.accentColor), "accent color is empty or a hex value");
+  assert(["theme", "custom"].includes(normalized.settings.accentColorMode), "accent color mode is supported");
+  const themeAccent = normalizeData({ ...raw, settings: { ...raw.settings, accentColor: "#f5c2e7", accentColorMode: undefined } }, {
+    mergeDefaults,
+    normalizeArray,
+    randomId,
+    applySizePreset,
+    packLayout,
+    deepClone,
+    getDefinition
+  });
+  assert(themeAccent.settings.accentColorMode === "theme", "default accent color follows the theme");
+  const customAccent = normalizeData({ ...raw, settings: { ...raw.settings, accentColor: "#123456", accentColorMode: undefined } }, {
+    mergeDefaults,
+    normalizeArray,
+    randomId,
+    applySizePreset,
+    packLayout,
+    deepClone,
+    getDefinition
+  });
+  assert(customAccent.settings.accentColorMode === "custom", "non-default accent color stays custom");
   assert(
     normalized.settings.obsidianStartDate === raw.settings.obsidianStartDate,
     "configured start date preserved"
@@ -290,6 +342,28 @@ function run() {
   assert(badState.status === "idle", "invalid pomodoro status falls back");
   assert(badState.remainingSeconds === 0, "remainingSeconds clamped >= 0");
   assert(badState.todayCount === 0, "todayCount clamped >= 0");
+
+  const runningPomodoro = {
+    status: "running",
+    remainingSeconds: 1500,
+    phaseStartedAt: 1000,
+    todayCountDate: "2026-08-08",
+    todayCount: 0
+  };
+  assert(
+    !shouldPersistPomodoroState(runningPomodoro, { ...runningPomodoro, remainingSeconds: 1499 }),
+    "pomodoro display ticks do not overwrite the phase-start remaining time"
+  );
+  assert(
+    shouldPersistPomodoroState(runningPomodoro, {
+      ...runningPomodoro,
+      status: "break",
+      remainingSeconds: 300,
+      phaseStartedAt: 2500,
+      todayCount: 1
+    }),
+    "pomodoro phase transitions are persisted"
+  );
 
   const parsedBookmarks = parseBookmarks("Grok|https://grok.com\nhttps://chatgpt.com");
   assert(parsedBookmarks.length === 2, "bookmark settings parse label URLs and direct URLs");

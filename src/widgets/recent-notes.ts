@@ -1,15 +1,16 @@
 // @ts-nocheck
 import { ALL_SIZE_PRESETS } from "../layout/size-presets";
+import { t } from "../i18n";
 import { renderEmpty } from "./widget-api";
 
 import { Setting } from "obsidian";
 
-function formatUpdatedAt(timestamp, now) {
+function formatUpdatedAt(timestamp, now, language) {
   const elapsedDays = Math.max(0, Math.floor((now.getTime() - Number(timestamp || 0)) / 86400000));
-  if (elapsedDays === 0) return "today";
-  if (elapsedDays === 1) return "yesterday";
-  if (elapsedDays < 14) return `${elapsedDays}d ago`;
-  return new Date(timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (elapsedDays === 0) return t(language, "today");
+  if (elapsedDays === 1) return t(language, "yesterday");
+  if (elapsedDays < 14) return t(language, "daysAgoShort", { count: elapsedDays });
+  return new Date(timestamp).toLocaleDateString(language === "zh-CN" ? "zh-CN" : "en-US", { month: "short", day: "numeric" });
 }
 
 function displayName(file) {
@@ -38,7 +39,7 @@ export const recentNotesWidget = {
       .slice(0, limit);
 
     if (!recent.length) {
-      renderEmpty(container, "No notes yet.");
+      renderEmpty(container, t(api.language, "noNotes"));
       return;
     }
 
@@ -48,21 +49,21 @@ export const recentNotesWidget = {
       row.createDiv({ cls: "yh-project-index", text: String(index + 1).padStart(2, "0") });
       const left = row.createDiv({ cls: "yh-list-left" });
       left.createDiv({ cls: "yh-list-title", text: displayName(file) });
-      left.createDiv({ cls: "yh-list-meta", text: formatUpdatedAt(file.stat?.mtime, api.snapshot.now) });
+      left.createDiv({ cls: "yh-list-meta", text: formatUpdatedAt(file.stat?.mtime, api.snapshot.now, api.language) });
       row.createDiv({ cls: "yh-row-arrow", text: "↗", attr: { "aria-hidden": "true" } });
       row.addEventListener("click", async () => {
         await api.openPath(file.path);
       });
     }
   },
-  renderSettings(container, draft) {
-    new Setting(container).setName("Title").addText((text) => {
+  renderSettings(container, draft, ctx) {
+    new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    new Setting(container).setName("Note count").setDesc("How many recent notes to show (1–20).").addText((text) => {
+    new Setting(container).setName(t(ctx.language, "noteCount")).setDesc(t(ctx.language, "noteCountDesc")).addText((text) => {
       text.setValue(String(draft.limit || 6));
       text.onChange((value) => {
         draft.limit = Math.max(1, Math.min(20, Number(value) || 6));
