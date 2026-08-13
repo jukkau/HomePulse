@@ -33,6 +33,12 @@ Module._load = function (request, parent, isMain) {
         open() {}
         close() {}
       },
+      FuzzySuggestModal: class FuzzySuggestModal {
+        constructor(app) { this.app = app; }
+        open() {}
+        close() {}
+        setPlaceholder() {}
+      },
       Setting: class Setting {
         setName() { return this; }
         setDesc() { return this; }

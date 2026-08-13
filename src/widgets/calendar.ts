@@ -20,12 +20,12 @@ export const calendarWidget = {
       state.month = api.snapshot.now.getMonth();
     }
     const nav = container.createDiv({ cls: "yh-calendar-nav" });
-    const prev = nav.createEl("button", { text: "‹" });
+    const prev = nav.createEl("button", { text: "‹", attr: { "aria-label": t(api.language, "previousMonth") } });
     nav.createDiv({
       cls: "yh-calendar-title",
       text: new Date(state.year, state.month).toLocaleDateString(api.language === "zh-CN" ? "zh-CN" : "en-US", { year: "numeric", month: "long" })
     });
-    const next = nav.createEl("button", { text: "›" });
+    const next = nav.createEl("button", { text: "›", attr: { "aria-label": t(api.language, "nextMonth") } });
     prev.addEventListener("click", async () => {
       state.month -= 1;
       if (state.month < 0) {

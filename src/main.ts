@@ -36,9 +36,8 @@ const {
 } = require("obsidian");
 
 function stripHoverHints(root) {
-  root.querySelectorAll("[title], [aria-label]").forEach((element) => {
+  root.querySelectorAll("[title]").forEach((element) => {
     element.removeAttribute("title");
-    element.removeAttribute("aria-label");
   });
   root.querySelectorAll("title").forEach((element) => element.remove());
 }
@@ -65,7 +64,7 @@ function cycleValue(values, current) {
 }
 
 function getResponsiveBasisWidth(frame) {
-  return Math.max(window.innerWidth || 0, frame?.clientWidth || 0);
+  return Math.max(0, frame?.clientWidth || window.innerWidth || 0);
 }
 
 function clampLayoutColumns(value, fallback = 5) {
@@ -710,7 +709,7 @@ class YukiHomepageView extends ItemView {
             ? this.plugin.t("periodAfternoon")
             : this.plugin.t("periodEvening");
       timeEl.setText(now.toLocaleTimeString(this.plugin.language === "en" ? "en-US" : "zh-CN", { hour12: false }));
-      dateEl.setText(`${formatLongDate(now, this.plugin.language)} · ${now.toLocaleDateString(this.plugin.language === "en" ? "en-US" : "zh-CN", { month: "short", day: "numeric", year: "numeric" })}`);
+      dateEl.setText(formatLongDate(now, this.plugin.language));
       periodEl.setText(period);
     };
     tick();
@@ -923,6 +922,8 @@ class YukiHomepageView extends ItemView {
         snapshot,
         rememberInterval: (id) => this.rememberInterval(id),
         requestRender: () => this.renderView(),
+        suppressVaultRefresh: (path) => this.plugin.suppressVaultRefresh(path),
+        restoreVaultRefresh: (path) => this.plugin.restoreVaultRefresh(path),
         getState: () => this.plugin.getWidgetData(widget.id, widget.type).state,
         getConfig: () => this.plugin.getWidgetData(widget.id, widget.type).config,
         getTimeLogs: (query = {}) => this.plugin.getTimeLogService().query(query),
@@ -991,6 +992,7 @@ class YukiHomepagePlugin extends Plugin {
     this.registry = createWidgetRegistry(this);
     this.data = this.normalizeData(await this.loadData());
     this.refreshTimer = 0;
+    this.suppressedVaultRefreshes = new Map();
 
     this.registerView(VIEW_TYPE, (leaf) => new YukiHomepageView(leaf, this));
     this.openHomepageRibbonEl = this.addRibbonIcon(VIEW_ICON, this.t("openHomePulse"), () => {
@@ -1005,7 +1007,10 @@ class YukiHomepagePlugin extends Plugin {
     });
     this.addSettingTab(new YukiHomepageSettingTab(this.app, this));
 
-    const refresh = () => this.scheduleRefresh();
+    const refresh = (file) => {
+      if (this.consumeSuppressedVaultRefresh(file?.path)) return;
+      this.scheduleRefresh();
+    };
     this.registerEvent(this.app.vault.on("create", refresh));
     this.registerEvent(this.app.vault.on("modify", refresh));
     this.registerEvent(this.app.vault.on("delete", refresh));
@@ -1114,6 +1119,22 @@ class YukiHomepagePlugin extends Plugin {
     this.refreshTimer = window.setTimeout(() => {
       this.refreshOpenViews();
     }, 250);
+  }
+
+  suppressVaultRefresh(path) {
+    if (!path) return;
+    this.suppressedVaultRefreshes.set(path, Date.now() + 1500);
+  }
+
+  restoreVaultRefresh(path) {
+    this.suppressedVaultRefreshes.delete(path);
+  }
+
+  consumeSuppressedVaultRefresh(path) {
+    const expiresAt = this.suppressedVaultRefreshes.get(path);
+    if (!expiresAt) return false;
+    this.suppressedVaultRefreshes.delete(path);
+    return expiresAt >= Date.now();
   }
 
   refreshOpenViews() {

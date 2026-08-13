@@ -2,8 +2,6 @@
 import { Setting, setIcon } from "obsidian";
 import { t } from "../i18n";
 
-import { renderEmpty } from "./widget-api";
-
 const ALLOWED_SIZE_PRESETS = ["W2H2", "W3H2", "W4H2", "W5H2", "W2H3", "W3H3", "W4H3", "W5H3"];
 
 const RANGES = [
@@ -75,9 +73,50 @@ function renderRangeTabs(parent, activeRange, onSelect, language) {
   for (const range of RANGES) {
     const button = tabs.createEl("button", {
       cls: range.key === activeRange ? "yh-time-flow-tab is-active" : "yh-time-flow-tab",
-      text: t(language, range.labelKey)
+      text: t(language, range.labelKey),
+      attr: { "data-range": range.key, "aria-pressed": String(range.key === activeRange) }
     });
     button.addEventListener("click", () => onSelect(range.key));
+  }
+}
+
+function updateTimeFlowContent({ activeRange, metricTotal, metricMeta, bucketGrid, recent, api, recentLimit }) {
+  const summary = api.getTimeSummary(activeRange);
+  const bounds = rangeBounds(activeRange, api.snapshot.now);
+  const logs = api.getTimeLogs({ startDate: bounds.start, endDate: bounds.end })
+    .slice()
+    .sort((a, b) => b.startTime - a.startTime)
+    .slice(0, recentLimit);
+
+  metricTotal.setText(formatDuration(summary.totalDuration));
+  metricMeta.setText(t(api.language, "logCount", { count: summary.count }));
+  bucketGrid.empty();
+  renderBuckets(bucketGrid, t(api.language, "projects"), summary.byProject, api.language);
+  renderBuckets(bucketGrid, t(api.language, "areas"), summary.byArea, api.language);
+  recent.empty();
+  recent.createDiv({ cls: "yh-time-flow-section-title", text: t(api.language, "recent") });
+  if (!logs.length) {
+    const empty = recent.createDiv({ cls: "yh-empty yh-time-flow-empty" });
+    empty.createDiv({ cls: "yh-empty-title", text: t(api.language, "noTimeLogs") });
+    const add = empty.createEl("button", { cls: "yh-empty-inline-action", text: t(api.language, "recordTime") });
+    add.addEventListener("click", () => api.openManualTimeRecord());
+    return;
+  }
+
+  const list = recent.createDiv({ cls: "yh-list yh-time-flow-list" });
+  for (const log of logs) {
+    const row = list.createDiv({ cls: "yh-list-row yh-time-flow-row" });
+    const left = row.createDiv({ cls: "yh-list-left" });
+    left.createDiv({ cls: "yh-list-title", text: targetTitle(log) || t(api.language, "untitled") });
+    const source = t(api.language, log.source === "manual" ? "sourceManual" : "sourcePomodoro");
+    left.createDiv({ cls: "yh-list-meta", text: `${formatDateTime(log.startTime, api.language)} / ${formatDuration(log.duration)} / ${source}` });
+    const remove = row.createEl("button", { cls: "yh-time-flow-delete", attr: { "aria-label": t(api.language, "deleteTimeLog") } });
+    setIcon(remove, "trash-2");
+    remove.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await api.deleteTimeLog(log.id);
+      updateTimeFlowContent({ activeRange, metricTotal, metricMeta, bucketGrid, recent, api, recentLimit });
+    });
   }
 }
 
@@ -91,51 +130,28 @@ export const timeFlowWidget = {
   defaultState: {},
   async render(container, api) {
     const uiState = api.getUiState();
-    const activeRange = RANGES.some((item) => item.key === uiState.range) ? uiState.range : "today";
     const recentLimit = Math.max(3, Math.min(10, Number(api.widgetData.config.recentLimit) || 6));
-    const summary = api.getTimeSummary(activeRange);
-    const bounds = rangeBounds(activeRange, api.snapshot.now);
-    const logs = api.getTimeLogs({ startDate: bounds.start, endDate: bounds.end })
-      .slice()
-      .sort((a, b) => b.startTime - a.startTime)
-      .slice(0, recentLimit);
+    let activeRange = RANGES.some((item) => item.key === uiState.range) ? uiState.range : "today";
 
     const root = container.createDiv({ cls: "yh-time-flow" });
     const top = root.createDiv({ cls: "yh-time-flow-top" });
     const metric = top.createDiv({ cls: "yh-time-flow-metric" });
-    metric.createDiv({ cls: "yh-time-flow-total", text: formatDuration(summary.totalDuration) });
-    metric.createDiv({ cls: "yh-time-flow-meta", text: t(api.language, "logCount", { count: summary.count }) });
-    renderRangeTabs(top, activeRange, (range) => {
-      api.setUiState({ range });
-      api.requestRender();
-    }, api.language);
-
+    const metricTotal = metric.createDiv({ cls: "yh-time-flow-total" });
+    const metricMeta = metric.createDiv({ cls: "yh-time-flow-meta" });
     const bucketGrid = root.createDiv({ cls: "yh-time-flow-grid" });
-    renderBuckets(bucketGrid, t(api.language, "projects"), summary.byProject, api.language);
-    renderBuckets(bucketGrid, t(api.language, "areas"), summary.byArea, api.language);
-
     const recent = root.createDiv({ cls: "yh-time-flow-recent" });
-    recent.createDiv({ cls: "yh-time-flow-section-title", text: t(api.language, "recent") });
-    if (!logs.length) {
-      renderEmpty(recent, t(api.language, "noTimeLogs"));
-      return;
-    }
-
-    const list = recent.createDiv({ cls: "yh-list yh-time-flow-list" });
-    for (const log of logs) {
-      const row = list.createDiv({ cls: "yh-list-row yh-time-flow-row" });
-      const left = row.createDiv({ cls: "yh-list-left" });
-      left.createDiv({ cls: "yh-list-title", text: targetTitle(log) || t(api.language, "untitled") });
-      const source = t(api.language, log.source === "manual" ? "sourceManual" : "sourcePomodoro");
-      left.createDiv({ cls: "yh-list-meta", text: `${formatDateTime(log.startTime, api.language)} / ${formatDuration(log.duration)} / ${source}` });
-      const remove = row.createEl("button", { cls: "yh-time-flow-delete", attr: { "aria-label": t(api.language, "deleteTimeLog") } });
-      setIcon(remove, "trash-2");
-      remove.addEventListener("click", async (event) => {
-        event.stopPropagation();
-        await api.deleteTimeLog(log.id);
-        api.requestRender();
+    const update = () => updateTimeFlowContent({ activeRange, metricTotal, metricMeta, bucketGrid, recent, api, recentLimit });
+    renderRangeTabs(top, activeRange, (range) => {
+      if (range === activeRange) return;
+      api.setUiState({ range });
+      activeRange = range;
+      top.querySelectorAll(".yh-time-flow-tab").forEach((button) => {
+        button.toggleClass("is-active", button.dataset.range === range);
+        button.setAttribute("aria-pressed", String(button.dataset.range === range));
       });
-    }
+      update();
+    }, api.language);
+    update();
   },
   renderSettings(container, draft, ctx) {
     new Setting(container).setName(t(ctx.language, "title")).addText((text) => {

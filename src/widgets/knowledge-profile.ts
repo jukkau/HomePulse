@@ -49,7 +49,10 @@ export const knowledgeProfileWidget = {
 
     // Totals only — the weekly growth trend lives in Execution Pulse, so this
     // widget is the "profile" (reference counts), not a second trend view.
-    const stats = container.createDiv({ cls: "yh-knowledge-profile" });
+    const stats = container.createDiv({
+      cls: "yh-knowledge-profile",
+      attr: { role: "list", "aria-label": api.widgetData.config.title || t(api.language, "knowledge") }
+    });
     const items = [
       { label: t(api.language, "notes"), value: files.length, icon: "file-text" },
       { label: t(api.language, "areas"), value: areas.length, icon: "layers" },
@@ -57,7 +60,10 @@ export const knowledgeProfileWidget = {
       { label: t(api.language, "tags"), value: tagCount, icon: "hash" }
     ];
     for (const item of items) {
-      const stat = stats.createDiv({ cls: "yh-knowledge-stat" });
+      const stat = stats.createDiv({
+        cls: "yh-knowledge-stat",
+        attr: { role: "listitem", "aria-label": `${item.label}: ${item.value}` }
+      });
       const icon = stat.createDiv({ cls: "yh-knowledge-stat-icon" });
       setIcon(icon, item.icon);
       const body = stat.createDiv({ cls: "yh-knowledge-stat-body" });

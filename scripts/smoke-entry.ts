@@ -13,6 +13,7 @@ import { createWidgetRegistry } from "../src/widgets/registry";
 import { calculateObsidianUsageDays } from "../src/services/obsidian-usage";
 import { countDistinctCompletionDays, shouldPersistPomodoroState } from "../src/widgets/widget-api";
 import { parseBookmarks } from "../src/widgets/bookmarks";
+import { markTaskComplete } from "../src/widgets/tasks";
 import { t, widgetName, widgetTitle } from "../src/i18n";
 import { resolveTechTreeProjectFolders } from "../src/widgets/tech-tree";
 
@@ -196,6 +197,18 @@ function run() {
   assert(calculateObsidianUsageDays("2026-07-18", new Date(2026, 6, 18)) === 1, "start day counts as day one");
   assert(calculateObsidianUsageDays("2026-07-17", new Date(2026, 6, 18)) === 2, "usage counts inclusively");
   assert(calculateObsidianUsageDays("2026-07-19", new Date(2026, 6, 18)) === null, "future date rejected");
+  assert(
+    markTaskComplete("- [ ] first\r\n- [ ] second", { line: 2, source: "- [ ] second" }) === "- [ ] first\r\n- [x] second",
+    "Tasks completes the indexed checkbox without changing Windows line endings"
+  );
+  assert(
+    markTaskComplete("- [ ] first\n- [ ] second", { line: 9, source: "- [ ] second" }) === "- [ ] first\n- [x] second",
+    "Tasks falls back to the source line when the note changed above the task"
+  );
+  assert(
+    markTaskComplete("- [ ] first", { line: 1, source: "- [ ] missing" }) === null,
+    "Tasks refuses to complete a task when its source line is no longer present"
+  );
   assert(countDistinctCompletionDays({
     "read|2026-07-17": true,
     "move|2026-07-17": true,

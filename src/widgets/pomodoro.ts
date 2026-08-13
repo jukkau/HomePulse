@@ -229,7 +229,7 @@ export const pomodoroWidget = {
         : workSeconds) || 1;
       const pct = Math.max(0, Math.min(100, ((total - computed.remainingSeconds) / total) * 100));
       timerText.setText(formatSeconds(computed.remainingSeconds));
-      progressFill.style.setProperty("--yh-pomo-fill", `${pct}%`);
+      progressFill.style.setProperty("--yh-pomo-fill", String(pct / 100));
       progressFill.toggleClass("is-break", computed.status === "break");
       const activeTarget = computed.activeTarget || stored.state.activeTarget;
       meta.setText(

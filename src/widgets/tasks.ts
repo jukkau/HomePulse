@@ -5,7 +5,24 @@ import { t } from "../i18n";
 import { getInheritedProjectFolders, readProjectFilterConfig, renderProjectFilterSettings, withInheritedProjectFolders } from "../services/project-filter";
 import { renderEmpty } from "./widget-api";
 
-const { Setting } = require("obsidian");
+const { Notice, Setting } = require("obsidian");
+
+export function markTaskComplete(content, task) {
+  const text = String(content || "");
+  const newline = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(newline);
+  const lineIndex = Number(task.line) - 1;
+  const source = String(task.source || "").replace(/\r$/, "");
+  if (lineIndex >= 0 && lineIndex < lines.length && lines[lineIndex] === source) {
+    lines[lineIndex] = lines[lineIndex].replace(/(\[) (\])/, "$1x$2");
+    return lines.join(newline);
+  }
+
+  const fallbackIndex = lines.findIndex((line) => line === source);
+  if (fallbackIndex < 0) return null;
+  lines[fallbackIndex] = lines[fallbackIndex].replace(/(\[) (\])/, "$1x$2");
+  return lines.join(newline);
+}
 
 export const tasksWidget = {
   type: "tasks",
@@ -33,16 +50,36 @@ export const tasksWidget = {
     }
     const list = container.createDiv({ cls: "yh-task-list" });
     for (const task of tasks) {
-      const row = list.createEl("button", {
-        cls: "yh-task-row"
+      const row = list.createDiv({ cls: "yh-task-row" });
+      const check = row.createEl("button", {
+        cls: "yh-task-check",
+        attr: { "aria-label": t(api.language, "done") }
       });
-      row.createDiv({ cls: "yh-task-check", attr: { "aria-hidden": "true" } });
       const content = row.createDiv({ cls: "yh-task-content" });
       content.createDiv({ cls: "yh-task-text", text: task.text });
       content.createDiv({ cls: "yh-task-file", text: task.name });
-      row.createDiv({ cls: "yh-row-arrow", text: "↗", attr: { "aria-hidden": "true" } });
-      row.addEventListener("click", async () => {
-        await api.openPath(task.path);
+      check.addEventListener("click", async () => {
+        if (check.disabled) return;
+        check.disabled = true;
+        let saved = false;
+        try {
+          const file = api.app.vault.getAbstractFileByPath(task.path);
+          if (!file || !file.path) throw new Error("Task file not found.");
+          api.suppressVaultRefresh(task.path);
+          await api.app.vault.process(file, (content) => {
+            const updated = markTaskComplete(content, task);
+            if (updated === null) throw new Error("Task changed before it could be completed.");
+            return updated;
+          });
+          saved = true;
+          row.addClass("is-completing");
+          window.setTimeout(() => row.remove(), 180);
+        } catch (error) {
+          if (!saved) api.restoreVaultRefresh(task.path);
+          row.removeClass("is-completing");
+          check.disabled = false;
+          new Notice(error.message || String(error));
+        }
       });
     }
   },

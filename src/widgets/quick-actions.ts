@@ -3,12 +3,11 @@ import { ALL_SIZE_PRESETS } from "../layout/size-presets";
 import { t } from "../i18n";
 import {
   normalizeArray,
-  parseQuickActions,
-  renderEmpty,
-  serializeQuickActions
+  renderEmpty
 } from "./widget-api";
 
-const { Notice, Setting, setIcon } = require("obsidian");
+const { FuzzySuggestModal: ObsidianFuzzySuggestModal, Notice, Setting, setIcon } = require("obsidian");
+const FuzzySuggestModal = ObsidianFuzzySuggestModal || class {};
 
 function actionIconName(item) {
   if (item.type === "daily-note") return "calendar-days";
@@ -52,6 +51,148 @@ function actionLabel(language, item) {
     return t(language, "search");
   }
   return label || t(language, "untitled");
+}
+
+function getCommandEntries(app) {
+  return Object.entries(app.commands.commands || {})
+    .map(([id, command]) => ({ id, name: String(command?.name || id) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+class SystemCommandPicker extends FuzzySuggestModal {
+  constructor(app, commands, language, onChoose) {
+    super(app);
+    this.commands = commands;
+    this.language = language;
+    this.onChoose = onChoose;
+    this.setPlaceholder(t(language, "chooseCommand"));
+    this.emptyStateText = t(language, "noCommandsFound");
+  }
+
+  getItems() {
+    return this.commands;
+  }
+
+  getItemText(command) {
+    return `${command.name} ${command.id}`;
+  }
+
+  renderSuggestion(match, el) {
+    const command = match.item;
+    el.createDiv({ cls: "yh-command-suggest-name", text: command.name });
+    el.createDiv({ cls: "yh-command-suggest-id", text: command.id });
+  }
+
+  onChooseItem(command) {
+    this.onChoose(command);
+  }
+}
+
+function renderActionManager(container, draft, ctx) {
+  const manager = container.createDiv({ cls: "yh-system-actions-manager" });
+  const toolbar = manager.createDiv({ cls: "yh-system-actions-toolbar" });
+  const selected = manager.createDiv({ cls: "yh-selected-actions" });
+  const count = toolbar.createDiv({ cls: "yh-system-actions-label", attr: { "aria-live": "polite" } });
+  const add = toolbar.createEl("button", { cls: "yh-system-add-command", attr: { "aria-label": t(ctx.language, "addCommand") } });
+  setIcon(add, "plus");
+  let draggingIndex = -1;
+
+  const updateActions = (items) => {
+    draft.items = items;
+    renderSelected();
+  };
+
+  const move = (items, from, to) => {
+    if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return;
+    const next = [...items];
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    updateActions(next);
+  };
+
+  const renderSelected = () => {
+    selected.empty();
+    const items = normalizeArray(draft.items, []);
+    count.setText(t(ctx.language, "selectedCommands", { count: items.length }));
+    if (!items.length) {
+      selected.createDiv({ cls: "yh-system-actions-empty", text: t(ctx.language, "noSystemActions") });
+      return;
+    }
+    const list = selected.createDiv({ cls: "yh-selected-action-list", attr: { role: "list" } });
+    items.forEach((item, index) => {
+      const label = actionLabel(ctx.language, item);
+      const row = list.createDiv({
+        cls: "yh-selected-action",
+        attr: {
+          draggable: "true",
+          role: "listitem",
+          tabindex: "0",
+          "aria-label": `${label}. ${t(ctx.language, "dragToReorder")}`
+        }
+      });
+      const dragHandle = row.createDiv({ cls: "yh-selected-action-drag", attr: { "aria-hidden": "true" } });
+      setIcon(dragHandle, "grip-vertical");
+      const details = row.createDiv({ cls: "yh-selected-action-details" });
+      details.createDiv({ cls: "yh-selected-action-name", text: label });
+      if (item.type === "command") {
+        details.createDiv({ cls: "yh-selected-action-id", text: item.value });
+      }
+      const controls = row.createDiv({ cls: "yh-selected-action-controls" });
+      const remove = controls.createEl("button", { attr: { "aria-label": `${t(ctx.language, "removeAction")}: ${label}` } });
+      setIcon(remove, "trash-2");
+
+      dragHandle.addEventListener("pointerdown", () => row.setAttribute("draggable", "true"));
+      row.addEventListener("dragstart", (event) => {
+        if (event.target.closest("button")) {
+          event.preventDefault();
+          return;
+        }
+        draggingIndex = index;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", String(index));
+        row.addClass("is-dragging");
+      });
+      row.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        if (draggingIndex !== index) row.addClass("is-drag-over");
+      });
+      row.addEventListener("dragleave", () => row.removeClass("is-drag-over"));
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const from = Number(event.dataTransfer.getData("text/plain"));
+        move(items, Number.isFinite(from) ? from : draggingIndex, index);
+      });
+      row.addEventListener("dragend", () => {
+        draggingIndex = -1;
+        row.setAttribute("draggable", "false");
+        list.querySelectorAll(".is-dragging, .is-drag-over").forEach((element) => {
+          element.removeClass("is-dragging");
+          element.removeClass("is-drag-over");
+        });
+      });
+      row.addEventListener("keydown", (event) => {
+        if (!event.altKey || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+        event.preventDefault();
+        const target = event.key === "ArrowUp" ? index - 1 : index + 1;
+        move(items, index, target);
+        window.setTimeout(() => selected.querySelectorAll(".yh-selected-action")[target]?.focus(), 0);
+      });
+      remove.addEventListener("click", () => updateActions(items.filter((_, itemIndex) => itemIndex !== index)));
+      row.setAttribute("draggable", "false");
+    });
+  };
+
+  add.addEventListener("click", () => {
+    const selectedIds = new Set(normalizeArray(draft.items, [])
+      .filter((item) => item.type === "command")
+      .map((item) => item.value));
+    const commands = getCommandEntries(ctx.app).filter((command) => !selectedIds.has(command.id));
+    new SystemCommandPicker(ctx.app, commands, ctx.language, (command) => {
+      updateActions([...normalizeArray(draft.items, []), { label: command.name, type: "command", value: command.id }]);
+    }).open();
+  });
+
+  renderSelected();
 }
 
 export const quickActionsWidget = {
@@ -129,32 +270,26 @@ export const quickActionsWidget = {
     for (const item of items) renderButton(grid, item, variant === "compact");
   },
   renderSettings(container, draft, ctx) {
+    container.addClass("yh-system-widget-settings");
     new Setting(container).setName(t(ctx.language, "title")).addText((text) => {
       text.setValue(draft.title || "");
       text.onChange((value) => {
         draft.title = value;
       });
     });
-    new Setting(container).setName(t(ctx.language, "layout")).addDropdown((drop) => {
-      drop.addOption("grid", t(ctx.language, "grid"));
-      drop.addOption("compact", t(ctx.language, "compactList"));
-      drop.setValue(draft.variant === "compact" ? "compact" : "grid");
-      drop.onChange((value) => {
-        draft.variant = value;
-      });
+    const layoutSetting = new Setting(container).setName(t(ctx.language, "layout"));
+    layoutSetting.settingEl.addClass("yh-system-layout-setting");
+    const layoutSelect = layoutSetting.controlEl.createEl("select", { cls: "yh-system-layout-select" });
+    layoutSelect.createEl("option", { value: "grid", text: t(ctx.language, "grid") });
+    layoutSelect.createEl("option", { value: "compact", text: t(ctx.language, "compactList") });
+    layoutSelect.value = draft.variant === "compact" ? "compact" : "grid";
+    layoutSelect.addEventListener("change", () => {
+      draft.variant = layoutSelect.value;
     });
     const actionsSetting = new Setting(container)
       .setName(t(ctx.language, "systemActions"))
       .setDesc(t(ctx.language, "systemActionsDesc"));
-    actionsSetting.settingEl.addClass("yh-quick-actions-setting");
-    actionsSetting.addTextArea((text) => {
-      text.inputEl.rows = 4;
-      text.inputEl.spellcheck = false;
-      text.setPlaceholder("daily|daily-note|\nsearch|command|global-search:open");
-      text.setValue(serializeQuickActions(draft.items || []));
-      text.onChange((value) => {
-        draft.items = parseQuickActions(value);
-      });
-    });
+    actionsSetting.settingEl.addClass("yh-system-actions-setting");
+    renderActionManager(actionsSetting.controlEl, draft, ctx);
   }
 };

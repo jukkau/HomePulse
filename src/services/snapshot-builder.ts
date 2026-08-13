@@ -232,7 +232,9 @@ export class SnapshotBuilder {
             path: entry.file.path,
             file: entry.file,
             name: entry.file.basename,
-            text: stripTaskText(match[2])
+            text: stripTaskText(match[2]),
+            line: entry.content.slice(0, match.index).split("\n").length,
+            source: match[0]
           });
         } else {
           this.doneTaskCount += 1;
