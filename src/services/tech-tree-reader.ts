@@ -41,11 +41,11 @@ function extractLinkpath(value: LooseValue): string {
   return normalizePath((wikiLink ? wikiLink[1] : text).replace(/\.md$/i, ""));
 }
 
-function displayProjectName(file: LooseValue, frontmatter: LooseValue): string {
-  if (frontmatter.title) return String(frontmatter.title);
+function displayProjectName(file: LooseValue, _frontmatter: LooseValue): string {
   return String(file.basename || "")
     .replace(/^Project_(?:\d+|long)_/i, "")
-    .replace(/_/g, " ");
+    .replace(/_/g, " ")
+    .trim();
 }
 
 function nodeId(prefix: string, path: string): string {
