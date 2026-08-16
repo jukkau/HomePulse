@@ -9,23 +9,65 @@ import {
 const { FuzzySuggestModal: ObsidianFuzzySuggestModal, Notice, Setting, setIcon } = require("obsidian");
 const FuzzySuggestModal = ObsidianFuzzySuggestModal || class {};
 
-function actionIconName(item) {
+// Default icon used when a command has no registered icon and no keyword
+// hint matches. Kept as the final fallback.
+const FALLBACK_COMMAND_ICON = "command";
+
+// Keyword hints used as a fallback when a command has no registered icon of
+// its own. Each entry is [needle, lucide-icon]. Matching is case-insensitive
+// against the command id and the user-visible label.
+const COMMAND_ICON_HINTS = [
+  ["open-settings", "settings"],
+  ["settings", "settings"],
+  ["app-settings", "settings"],
+  ["global-search", "search"],
+  ["search", "search"],
+  ["graph", "share-2"],
+  ["graph-view", "share-2"],
+  ["new-file", "file-plus-2"],
+  ["file-explorer", "folder-open"],
+  ["quickadd", "zap"],
+  ["command-palette", "square-terminal"],
+  ["zoom-in", "zoom-in"],
+  ["zoom-out", "zoom-out"],
+  ["toggle-pin", "pin"],
+  ["pin", "pin"],
+  ["theme", "palette"],
+  ["reload", "refresh-cw"]
+];
+
+function actionIconName(item, commands) {
   if (item.type === "daily-note") return "calendar-days";
-  const commandIcons = [
-    ["global-search", "search"],
-    ["graph", "share-2"],
-    ["new-file", "file-plus-2"],
-    ["quickadd", "zap"],
-    ["command-palette", "square-terminal"]
-  ];
-  const command = String(item.value || "").toLowerCase();
-  return commandIcons.find(([needle]) => command.includes(needle))?.[1] || "command";
+
+  if (item.type === "command") {
+    // Prefer the icon registered with the command itself. Obsidian commands
+    // can declare a Lucide icon name when they call addCommand({ icon }),
+    // and most built-ins / plugins do. This is what the command palette
+    // shows next to each entry, so it is the most accurate choice.
+    const registeredIcon = commands?.[item.value]?.icon;
+    if (registeredIcon) return registeredIcon;
+
+    // Fall back to keyword hints so commands without a registered icon
+    // still get a sensible picture (e.g. open-settings -> settings).
+    const haystacks = [
+      String(item.value || "").toLowerCase(),
+      String(item.label || "").toLowerCase()
+    ];
+    const match = COMMAND_ICON_HINTS.find(([needle]) =>
+      haystacks.some((h) => h.includes(needle))
+    );
+    if (match) return match[1];
+
+    return FALLBACK_COMMAND_ICON;
+  }
+
+  return FALLBACK_COMMAND_ICON;
 }
 
-function renderActionIcon(button, item) {
+function renderActionIcon(button, item, commands) {
   const icon = button.createDiv({ cls: "yh-action-icon" });
   if (item.type !== "url") {
-    setIcon(icon, actionIconName(item));
+    setIcon(icon, actionIconName(item, commands));
     return;
   }
 
@@ -218,6 +260,11 @@ export const quickActionsWidget = {
     const secondaryItems = normalizeArray(api.widgetData.config.secondaryItems, []);
     const configuredVariant = api.widgetData.config.variant;
     const variant = configuredVariant === "stack" ? "stack" : configuredVariant === "compact" ? "compact" : "grid";
+    // Snapshot the registered commands so we can look up each command's own
+    // icon. This is what gives "打开设置" the gear icon, "放大" the zoom
+    // icon, and so on, instead of every system action collapsing to a
+    // generic fallback.
+    const commandMap = api.app?.commands?.commands || {};
     if (!items.length && !secondaryItems.length) {
       renderEmpty(container, t(api.language, "noQuickActions"));
       return;
@@ -247,7 +294,7 @@ export const quickActionsWidget = {
       const button = parent.createEl("button", {
         cls: `yh-action-btn ${compact ? "is-compact" : ""}`
       });
-      renderActionIcon(button, item);
+      renderActionIcon(button, item, commandMap);
       button.createDiv({ cls: "yh-action-label", text: actionLabel(api.language, item) });
       button.addEventListener("click", () => void runAction(item));
     };
