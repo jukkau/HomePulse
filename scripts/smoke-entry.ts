@@ -377,6 +377,22 @@ function run() {
     }),
     "pomodoro phase transitions are persisted"
   );
+  const completedPomodoro = {
+    ...runningPomodoro,
+    status: "break",
+    remainingSeconds: 300,
+    phaseStartedAt: 2500,
+    todayCount: 1
+  };
+  assert(
+    shouldPersistPomodoroState(completedPomodoro, {
+      ...completedPomodoro,
+      status: "idle",
+      remainingSeconds: 1500,
+      phaseStartedAt: 0
+    }),
+    "pomodoro break completion is persisted for a single notification transition"
+  );
 
   const parsedBookmarks = parseBookmarks("Grok|https://grok.com\nhttps://chatgpt.com");
   assert(parsedBookmarks.length === 2, "bookmark settings parse label URLs and direct URLs");

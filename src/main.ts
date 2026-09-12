@@ -24,6 +24,7 @@ import { calculateObsidianUsageDays, formatDateKey } from "./services/obsidian-u
 import { createWidgetRegistry } from "./widgets/registry";
 import { SetupWizardModal } from "./data/setup-wizard";
 import { clamp, deepClone, mergeDefaults, normalizeArray, randomId } from "./core/utils";
+import { formatSeconds } from "./widgets/widget-api";
 
 const {
   ItemView,
@@ -993,6 +994,19 @@ class YukiHomepagePlugin extends Plugin {
     this.data = this.normalizeData(await this.loadData());
     this.refreshTimer = 0;
     this.suppressedVaultRefreshes = new Map();
+    this.pomodoroStatusBarEl = this.addStatusBarItem();
+    this.pomodoroStatusBarEl.addClass("yh-pomodoro-status-bar");
+    this.pomodoroStatusBarEl.setAttribute("role", "button");
+    this.pomodoroStatusBarEl.tabIndex = 0;
+    this.registerDomEvent(this.pomodoroStatusBarEl, "click", () => void this.openHomepage());
+    this.registerDomEvent(this.pomodoroStatusBarEl, "keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        void this.openHomepage();
+      }
+    });
+    this.updatePomodoroStatusBar();
+    this.pomodoroStatusBarTimer = window.setInterval(() => this.updatePomodoroStatusBar(), 1000);
 
     this.registerView(VIEW_TYPE, (leaf) => new YukiHomepageView(leaf, this));
     this.openHomepageRibbonEl = this.addRibbonIcon(VIEW_ICON, this.t("openHomePulse"), () => {
@@ -1028,6 +1042,30 @@ class YukiHomepagePlugin extends Plugin {
 
   onunload() {
     window.clearTimeout(this.refreshTimer);
+    window.clearInterval(this.pomodoroStatusBarTimer);
+  }
+
+  updatePomodoroStatusBar() {
+    if (!this.pomodoroStatusBarEl) return;
+    const config = this.getFirstWidgetConfig("pomodoro");
+    const state = this.findFirstWidgetState("pomodoro");
+    const status = state.status || "idle";
+    const isActive = status === "running" || status === "break";
+    const baseSeconds = status === "break"
+      ? (Number(config.breakMinutes) || 5) * 60
+      : (Number(config.workMinutes) || 25) * 60;
+    const elapsed = isActive && state.phaseStartedAt
+      ? Math.floor((Date.now() - state.phaseStartedAt) / 1000)
+      : 0;
+    const remaining = Math.max(0, (Number(state.remainingSeconds) || baseSeconds) - elapsed);
+    const label = status === "running"
+      ? this.t("pomodoroStatusFocus")
+      : status === "break"
+        ? this.t("pomodoroStatusBreak")
+        : this.t("pomodoroStatusReady");
+    const text = `${label} ${formatSeconds(remaining)}`;
+    this.pomodoroStatusBarEl.setText(text);
+    this.pomodoroStatusBarEl.setAttribute("aria-label", text);
   }
 
   normalizeData(saved) {
@@ -1400,6 +1438,7 @@ class YukiHomepagePlugin extends Plugin {
       state: validateWidgetState(type, mergedState, definition ? definition.defaultState : {})
     };
     await this.persist();
+    this.updatePomodoroStatusBar();
   }
 }
 

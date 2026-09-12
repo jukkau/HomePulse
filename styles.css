@@ -1683,6 +1683,8 @@
 }
 
 .yh-pomo-target {
+  flex: 1;
+  min-width: 0;
   max-width: 100%;
   min-height: 20px;
   padding: 3px 8px;
@@ -1696,6 +1698,37 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   box-sizing: border-box;
+}
+
+.yh-pomo-target-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.yh-pomo-target-change {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  color: var(--komo-muted);
+  background: transparent;
+}
+
+.yh-pomo-target-change:hover,
+.yh-pomo-target-change:focus-visible {
+  color: var(--komo-text);
+  background: rgba(180, 190, 254, 0.08);
+}
+
+.yh-pomo-target-change svg {
+  width: 15px;
+  height: 15px;
 }
 
 .yh-pomo-controls {

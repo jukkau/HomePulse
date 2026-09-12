@@ -20,7 +20,33 @@ import {
   withInheritedProjectFolders
 } from "../services/project-filter";
 
-import { Modal, Setting, setIcon } from "obsidian";
+import { Modal, Notice, Setting, setIcon } from "obsidian";
+
+async function requestSystemNotificationPermission() {
+  if (typeof Notification === "undefined") return "unsupported";
+  if (Notification.permission !== "default") return Notification.permission;
+  try {
+    return await Notification.requestPermission();
+  } catch (_) {
+    return "denied";
+  }
+}
+
+function notifyPomodoroPhase(language, phase, breakMinutes) {
+  const isBreak = phase === "break";
+  const title = t(language, isBreak ? "pomodoroFocusComplete" : "pomodoroBreakComplete");
+  const body = t(language, isBreak ? "pomodoroFocusCompleteDesc" : "pomodoroBreakCompleteDesc", {
+    minutes: breakMinutes
+  });
+
+  new Notice(`${title} ${body}`, 10_000);
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  try {
+    new Notification(title, { body, silent: false });
+  } catch (_) {
+    // Obsidian's in-app notice remains available when OS notifications fail.
+  }
+}
 
 function clampMinutes(value, fallback, max) {
   const next = Math.round(Number(value));
@@ -31,10 +57,11 @@ function clampMinutes(value, fallback, max) {
 // Replaces the old window.prompt flow (disallowed by Obsidian review) with a
 // proper Modal, while keeping a quick settings entry on the widget face.
 class PomodoroSettingsModal extends Modal {
-  constructor(app, config, onSave, language) {
+  constructor(app, config, onSave, onTestNotification, language) {
     super(app);
     this.config = config;
     this.onSave = onSave;
+    this.onTestNotification = onTestNotification;
     this.language = language;
     this.draft = {
       workMinutes: Number(config.workMinutes) || 25,
@@ -72,8 +99,10 @@ class PomodoroSettingsModal extends Modal {
 
     const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
     const cancel = footer.createEl("button", { cls: "yh-modal-cancel", text: t(this.language, "cancel") });
+    const test = footer.createEl("button", { text: t(this.language, "testNotification") });
     const save = footer.createEl("button", { cls: "mod-cta yh-modal-save", text: t(this.language, "save") });
     cancel.addEventListener("click", () => this.close());
+    test.addEventListener("click", () => void this.onTestNotification());
     save.addEventListener("click", async () => {
       await this.onSave(this.draft);
       this.close();
@@ -197,7 +226,9 @@ export const pomodoroWidget = {
     const progress = timer.createDiv({ cls: "yh-pomo-progress" });
     const progressFill = progress.createDiv({ cls: "yh-pomo-progress-fill" });
     const meta = timer.createDiv({ cls: "yh-pomo-meta" });
-    const targetLabel = timer.createDiv({ cls: "yh-pomo-target" });
+    const targetRow = timer.createDiv({ cls: "yh-pomo-target-row" });
+    const targetLabel = targetRow.createDiv({ cls: "yh-pomo-target" });
+    const changeTargetBtn = targetRow.createEl("button", { cls: "yh-pomo-target-change" });
     const controls = timer.createDiv({ cls: "yh-pomo-controls" });
     const startBtn = controls.createEl("button", {
       cls: "yh-pomo-btn yh-pomo-btn-primary"
@@ -219,8 +250,13 @@ export const pomodoroWidget = {
     setIcon(addTimeBtn, "plus");
     setIcon(logBtn, "history");
     setIcon(settingsBtn, "settings");
+    setIcon(changeTargetBtn, "arrow-right-left");
     const count = timer.createDiv({ cls: "yh-pomo-count" });
+    let isUpdating = false;
     const updateVisual = async () => {
+      if (isUpdating) return;
+      isUpdating = true;
+      try {
       const stored = { state: api.getState(), config: api.getConfig() };
       const computed = reconcilePomodoroState(stored.state, stored.config);
       const workSeconds = (Number(stored.config.workMinutes) || 25) * 60;
@@ -248,6 +284,14 @@ export const pomodoroWidget = {
       setIcon(startBtn, isActive ? "pause" : "play");
       if (shouldPersistPomodoroState(stored.state, computed)) {
         const sameActivePhase = isActive && stored.state.status === computed.status;
+        if (stored.state.status !== computed.status
+          && (computed.status === "break" || computed.status === "idle")) {
+          notifyPomodoroPhase(
+            api.language,
+            computed.status,
+            Number(stored.config.breakMinutes) || 5
+          );
+        }
         if (stored.state.status === "running" && computed.status === "break" && activeTarget) {
           const ui = api.getUiState();
           if (!ui.loggingPomodoro) {
@@ -273,6 +317,9 @@ export const pomodoroWidget = {
           recentTargets: computed.recentTargets || stored.state.recentTargets || []
         }, computed.status === "idle" && stored.state.status !== "idle");
       }
+      } finally {
+        isUpdating = false;
+      }
     };
     await updateVisual();
     api.rememberInterval(window.setInterval(() => {
@@ -292,6 +339,7 @@ export const pomodoroWidget = {
           recentTargets: computed.recentTargets || []
         }, true);
       } else {
+        void requestSystemNotificationPermission();
         let activeTarget = computed.activeTarget;
         if (!activeTarget && computed.status !== "break") {
           const targetConfig = withInheritedAreaFolders(
@@ -325,6 +373,36 @@ export const pomodoroWidget = {
         activeTarget: null
       }, true);
     });
+    changeTargetBtn.addEventListener("click", () => {
+      void (async () => {
+        const stored = { state: api.getState(), config: api.getConfig() };
+        const computed = reconcilePomodoroState(stored.state, stored.config);
+        if (computed.status === "running") {
+          new Notice(t(api.language, "pauseBeforeChangingTarget"));
+          return;
+        }
+        const targetConfig = withInheritedAreaFolders(
+          withInheritedProjectFolders(api.getConfig(), api.settings),
+          api.settings
+        );
+        const activeTarget = await chooseTarget(api.app, {
+          recentTargets: computed.recentTargets || [],
+          projectTargets: listProjectTargets(api.app, targetConfig),
+          areaTargets: listAreaTargets(api.app, targetConfig),
+          taskTarget: quickCaptureTaskTarget(api.app, targetConfig.taskFile)
+        }, api.language);
+        if (!activeTarget) return;
+        await api.saveState({
+          status: computed.status,
+          remainingSeconds: computed.remainingSeconds,
+          phaseStartedAt: computed.phaseStartedAt,
+          todayCountDate: computed.todayCountDate,
+          todayCount: computed.todayCount,
+          activeTarget,
+          recentTargets: rememberTarget(computed, activeTarget)
+        }, true);
+      })();
+    });
     addTimeBtn.addEventListener("click", () => {
       api.openManualTimeRecord();
     });
@@ -343,6 +421,9 @@ export const pomodoroWidget = {
           remainingSeconds: draft.workMinutes * 60,
           phaseStartedAt: 0
         }, true);
+      }, async () => {
+        await requestSystemNotificationPermission();
+        notifyPomodoroPhase(api.language, "break", Number(api.getConfig().breakMinutes) || 5);
       }, api.language).open();
     });
   },
