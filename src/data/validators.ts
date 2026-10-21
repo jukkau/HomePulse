@@ -112,6 +112,11 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
       break;
 
     case "music-player":
+      next.musicFolder = asString(raw.musicFolder, "").trim();
+      next.playMode = raw.playMode === "shuffle" ? "shuffle" : "sequential";
+      next.tracks = asString(raw.tracks, base.tracks || "");
+      next.volume = clampNumber(raw.volume ?? base.volume, 0, 1, 0.7);
+      next.loopPlaylist = (raw.loopPlaylist ?? base.loopPlaylist) !== false;
       next.title = asString(raw.title, base.title || "music player");
       next.serviceName = asString(raw.serviceName, base.serviceName || "NetEase Cloud Music").trim() || "NetEase Cloud Music";
       next.loginUrl = asString(raw.loginUrl, base.loginUrl || "https://music.163.com/").trim() || "https://music.163.com/";
@@ -244,6 +249,8 @@ export function validateWidgetState(type: string, state: LooseValue, defaultStat
   const raw = asPlainObject(state, {});
 
   switch (type) {
+    case "music-player":
+      return raw.volume == null ? {} : { volume: clampNumber(raw.volume, 0, 1, 0.7) };
     case "focus":
       return { text: asString(raw.text, base.text || "") };
 
@@ -252,6 +259,8 @@ export function validateWidgetState(type: string, state: LooseValue, defaultStat
       const status = POMO_STATUS.has(raw.status) ? raw.status : base.status || "idle";
       const next: LooseValue = {
         status,
+        pausedPhase: raw.pausedPhase === "break" ? "break" : "work",
+        sessionId: asString(raw.sessionId, ""),
         remainingSeconds: clampNumber(
           raw.remainingSeconds,
           0,

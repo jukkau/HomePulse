@@ -4,8 +4,7 @@ import { t } from "../i18n";
 import {
   formatSeconds,
   parseLineList,
-  reconcilePomodoroState,
-  shouldPersistPomodoroState
+  reconcilePomodoroState
 } from "./widget-api";
 import {
   listAreaTargets,
@@ -32,7 +31,7 @@ async function requestSystemNotificationPermission() {
   }
 }
 
-function notifyPomodoroPhase(language, phase, breakMinutes) {
+export function notifyPomodoroPhase(language, phase, breakMinutes) {
   const isBreak = phase === "break";
   const title = t(language, isBreak ? "pomodoroFocusComplete" : "pomodoroBreakComplete");
   const body = t(language, isBreak ? "pomodoroFocusCompleteDesc" : "pomodoroBreakCompleteDesc", {
@@ -251,6 +250,10 @@ export const pomodoroWidget = {
     setIcon(logBtn, "history");
     setIcon(settingsBtn, "settings");
     setIcon(changeTargetBtn, "arrow-right-left");
+    for (const [button, key] of [[resetBtn, "resetTimer"], [addTimeBtn, "recordTime"], [logBtn, "timeLog"], [settingsBtn, "pomodoroSettings"], [changeTargetBtn, "changeFocusTarget"]]) {
+      button.setAttribute("aria-label", t(api.language, key));
+      button.setAttribute("title", t(api.language, key));
+    }
     const count = timer.createDiv({ cls: "yh-pomo-count" });
     let isUpdating = false;
     const updateVisual = async () => {
@@ -260,13 +263,13 @@ export const pomodoroWidget = {
       const stored = { state: api.getState(), config: api.getConfig() };
       const computed = reconcilePomodoroState(stored.state, stored.config);
       const workSeconds = (Number(stored.config.workMinutes) || 25) * 60;
-      const total = (computed.status === "break"
+      const total = ((computed.status === "break" || (computed.status === "paused" && computed.pausedPhase === "break"))
         ? (Number(stored.config.breakMinutes) || 5) * 60
         : workSeconds) || 1;
       const pct = Math.max(0, Math.min(100, ((total - computed.remainingSeconds) / total) * 100));
       timerText.setText(formatSeconds(computed.remainingSeconds));
       progressFill.style.setProperty("--yh-pomo-fill", String(pct / 100));
-      progressFill.toggleClass("is-break", computed.status === "break");
+      progressFill.toggleClass("is-break", computed.status === "break" || (computed.status === "paused" && computed.pausedPhase === "break"));
       const activeTarget = computed.activeTarget || stored.state.activeTarget;
       meta.setText(
         computed.status === "idle"
@@ -279,44 +282,12 @@ export const pomodoroWidget = {
       );
       targetLabel.setText(activeTarget ? activeTarget.title : t(api.language, "noTargetSelected"));
       const summary = api.getTimeSummary("today");
-      count.setText(t(api.language, "todayFocus", { count: summary.totalDuration }));
+      count.setText(t(api.language, "todayFocus", { count: Math.round(summary.totalDuration) }));
       const isActive = computed.status === "running" || computed.status === "break";
       setIcon(startBtn, isActive ? "pause" : "play");
-      if (shouldPersistPomodoroState(stored.state, computed)) {
-        const sameActivePhase = isActive && stored.state.status === computed.status;
-        if (stored.state.status !== computed.status
-          && (computed.status === "break" || computed.status === "idle")) {
-          notifyPomodoroPhase(
-            api.language,
-            computed.status,
-            Number(stored.config.breakMinutes) || 5
-          );
-        }
-        if (stored.state.status === "running" && computed.status === "break" && activeTarget) {
-          const ui = api.getUiState();
-          if (!ui.loggingPomodoro) {
-            ui.loggingPomodoro = true;
-            const endTime = Date.now();
-            await api.createTimeLog({
-              source: "pomodoro",
-              startTime: endTime - workSeconds * 1000,
-              endTime,
-              target: activeTarget,
-              activityType: "work"
-            });
-            ui.loggingPomodoro = false;
-          }
-        }
-        await api.saveState({
-          status: computed.status,
-          remainingSeconds: sameActivePhase ? stored.state.remainingSeconds : computed.remainingSeconds,
-          phaseStartedAt: sameActivePhase ? stored.state.phaseStartedAt : computed.phaseStartedAt,
-          todayCountDate: computed.todayCountDate,
-          todayCount: computed.todayCount,
-          activeTarget,
-          recentTargets: computed.recentTargets || stored.state.recentTargets || []
-        }, computed.status === "idle" && stored.state.status !== "idle");
-      }
+      startBtn.setAttribute("aria-label", t(api.language, isActive ? "pauseTimer" : "startTimer"));
+      startBtn.setAttribute("title", startBtn.getAttribute("aria-label"));
+
       } finally {
         isUpdating = false;
       }
@@ -326,11 +297,13 @@ export const pomodoroWidget = {
       void updateVisual();
     }, 1000));
     startBtn.addEventListener("click", async () => {
+      await api.syncTimer?.();
       const stored = { state: api.getState(), config: api.getConfig() };
       const computed = reconcilePomodoroState(stored.state, stored.config);
       if (computed.status === "running" || computed.status === "break") {
         await api.saveState({
           status: "paused",
+          pausedPhase: computed.status === "break" ? "break" : "work",
           remainingSeconds: computed.remainingSeconds,
           phaseStartedAt: 0,
           todayCountDate: computed.todayCountDate,
@@ -355,7 +328,8 @@ export const pomodoroWidget = {
           if (!activeTarget) return;
         }
         await api.saveState({
-          status: computed.status === "break" ? "break" : "running",
+          status: computed.status === "break" || (computed.status === "paused" && computed.pausedPhase === "break") ? "break" : "running",
+          sessionId: computed.status === "idle" ? `session-${Date.now()}-${Math.random().toString(36).slice(2)}` : computed.sessionId,
           remainingSeconds: computed.remainingSeconds,
           phaseStartedAt: Date.now(),
           todayCountDate: computed.todayCountDate,
@@ -366,8 +340,11 @@ export const pomodoroWidget = {
       }
     });
     resetBtn.addEventListener("click", async () => {
+      await api.syncTimer?.();
       await api.saveState({
         status: "idle",
+        pausedPhase: "work",
+        sessionId: "",
         remainingSeconds: (Number(api.widgetData.config.workMinutes) || 25) * 60,
         phaseStartedAt: 0,
         activeTarget: null
@@ -375,6 +352,7 @@ export const pomodoroWidget = {
     });
     changeTargetBtn.addEventListener("click", () => {
       void (async () => {
+        await api.syncTimer?.();
         const stored = { state: api.getState(), config: api.getConfig() };
         const computed = reconcilePomodoroState(stored.state, stored.config);
         if (computed.status === "running") {
@@ -411,6 +389,7 @@ export const pomodoroWidget = {
     });
     settingsBtn.addEventListener("click", () => {
       new PomodoroSettingsModal(api.app, api.getConfig(), async (draft) => {
+        await api.syncTimer?.();
         await api.saveConfig({
           ...api.getConfig(),
           workMinutes: draft.workMinutes,

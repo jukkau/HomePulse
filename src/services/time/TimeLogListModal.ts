@@ -43,6 +43,9 @@ export class TimeLogListModal extends Modal {
     this.getLogs = getLogs;
     this.onDelete = onDelete;
     this.language = normalizeLanguage(language);
+    this.page = 0;
+    this.fromDate = "";
+    this.toDate = "";
   }
 
   onOpen() {
@@ -57,7 +60,27 @@ export class TimeLogListModal extends Modal {
     contentEl.createEl("h2", { text: this.t("timeLog") });
     contentEl.createDiv({ cls: "yh-settings-subtitle", text: this.t("timeLogDesc") });
 
-    const logs = this.getLogs().slice().sort((a, b) => b.startTime - a.startTime).slice(0, 20);
+    const filters = contentEl.createDiv({ cls: "yh-time-log-filters" });
+    for (const [key, label] of [["fromDate", "filterFrom"], ["toDate", "filterTo"]]) {
+      const wrapper = filters.createEl("label", { text: this.t(label) });
+      const input = wrapper.createEl("input", { type: "date", value: this[key] });
+      input.addEventListener("change", () => { this[key] = input.value; this.page = 0; this.render(); });
+    }
+    const from = this.fromDate ? new Date(`${this.fromDate}T00:00:00`).getTime() : -Infinity;
+    const toDay = this.toDate ? new Date(`${this.toDate}T00:00:00`) : null;
+    if (toDay) toDay.setDate(toDay.getDate() + 1);
+    const to = toDay?.getTime() ?? Infinity;
+    const filtered = this.getLogs().filter((log) => log.endTime > from && log.startTime < to).sort((a, b) => b.startTime - a.startTime);
+    const pages = Math.max(1, Math.ceil(filtered.length / 20));
+    this.page = Math.min(this.page, pages - 1);
+    const logs = filtered.slice(this.page * 20, (this.page + 1) * 20);
+    contentEl.createDiv({ text: this.t("recordsFiltered", { count: filtered.length }) });
+    const exportButton = filters.createEl("button", { text: this.t("exportRecords") });
+    exportButton.addEventListener("click", () => {
+      const url = URL.createObjectURL(new Blob([JSON.stringify(filtered, null, 2)], { type: "application/json" }));
+      const anchor = contentEl.createEl("a", { attr: { href: url, download: "homepulse-time-records.json" } });
+      anchor.click(); anchor.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
     const list = contentEl.createDiv({ cls: "yh-time-log-list" });
     if (!logs.length) {
       list.createDiv({ cls: "yh-empty", text: this.t("noTimeLogs") });
@@ -75,13 +98,25 @@ export class TimeLogListModal extends Modal {
 
       const remove = row.createEl("button", { cls: "yh-time-log-delete", text: this.t("delete") });
       remove.addEventListener("click", async () => {
-        await this.onDelete(log.id);
-        new Notice(this.t("timeLogDeleted"));
-        this.render();
+        remove.disabled = true;
+        try {
+          if (await this.onDelete(log.id)) new Notice(this.t("timeLogDeleted"));
+          this.render();
+        } catch (error) {
+          new Notice(this.t("saveFailed"));
+          remove.disabled = false;
+        }
       });
     }
 
     const footer = contentEl.createDiv({ cls: "yh-modal-footer" });
+    const previous = footer.createEl("button", { text: this.t("earlier") });
+    previous.disabled = this.page === 0;
+    previous.addEventListener("click", () => { this.page -= 1; this.render(); });
+    footer.createSpan({ text: this.t("pageOf", { page: this.page + 1, total: pages }) });
+    const next = footer.createEl("button", { text: this.t("next") });
+    next.disabled = this.page >= pages - 1;
+    next.addEventListener("click", () => { this.page += 1; this.render(); });
     const close = footer.createEl("button", { cls: "yh-modal-cancel", text: this.t("close") });
     close.addEventListener("click", () => this.close());
   }

@@ -63,9 +63,10 @@ export function formatSeconds(total: LooseValue): string {
   return `${minutes}:${seconds}`;
 }
 
-export function renderEmpty(container: LooseValue, text: string): void {
+export function renderEmpty(container: LooseValue, text: string, action?: { label: string; run: () => void }): void {
   const empty = container.createDiv({ cls: "yh-empty" });
   empty.createDiv({ cls: "yh-empty-title", text });
+  if (action) empty.createEl("button", { text: action.label }).addEventListener("click", action.run);
 }
 
 export function createSvg(parent: LooseValue, tag: string, attributes: Record<string, string> = {}): SVGElement {
@@ -101,20 +102,13 @@ export function reconcilePomodoroState(state: LooseValue, config: LooseValue): L
       return { ...next, remainingSeconds: remaining };
     }
     if (next.status === "running") {
-      return {
-        ...next,
-        status: "break",
-        remainingSeconds: breakSeconds + remaining,
-        phaseStartedAt: Date.now(),
-        todayCount: next.todayCount + 1
-      };
+      const deadline = next.phaseStartedAt + next.remainingSeconds * 1000;
+      const rest = breakSeconds + remaining;
+      return { ...next, status: rest > 0 ? "break" : "idle", pausedPhase: rest > 0 ? "break" : "work",
+        remainingSeconds: rest > 0 ? rest : workSeconds, phaseStartedAt: rest > 0 ? deadline : 0,
+        todayCount: next.todayCount + (localDateKey(new Date(deadline)) === today ? 1 : 0) };
     }
-    return {
-      ...next,
-      status: "idle",
-      remainingSeconds: workSeconds + remaining,
-      phaseStartedAt: 0
-    };
+    return { ...next, status: "idle", remainingSeconds: workSeconds, phaseStartedAt: 0 };
   }
 
   if (!next.remainingSeconds || next.remainingSeconds <= 0) {

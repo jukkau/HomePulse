@@ -1,10 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
-
 /*
  * Visual design reference: Dashboard-Komorebi.css by InlitX.
  * This plugin adapts its Komorebi / Catppuccin visual language for a native
  * Obsidian homepage. Original authorship remains credited to InlitX.
  */
+
+/* Typography follows Obsidian's reading size while retaining semantic hierarchy. */
+.yh-view, .yh-settings-shell, .yh-modal, .yh-add-widget-shell {
+  --yh-type-caption: calc(var(--font-text-size, 16px) * 0.75);
+  --yh-type-meta: calc(var(--font-text-size, 16px) * 0.8125);
+  --yh-type-file: calc(var(--font-text-size, 16px) * 0.875);
+  --yh-type-body: var(--font-text-size, 16px);
+  --yh-type-title: calc(var(--font-text-size, 16px) * 1.125);
+  --yh-type-heading: calc(var(--font-text-size, 16px) * 1.5);
+  --yh-type-metric: calc(var(--font-text-size, 16px) * 1.75);
+  --yh-type-timer: calc(var(--font-text-size, 16px) * 2.25);
+  --yh-type-clock: calc(var(--font-text-size, 16px) * 2.5);
+}
 
 .yh-view {
   --yh-accent: var(--interactive-accent, #f5c2e7);
@@ -33,8 +44,8 @@
   --komo-sub: var(--text-muted, #a6adc8);
   --komo-muted: var(--text-faint, #585b70);
   --komo-faint: color-mix(in srgb, var(--text-faint, #313244) 68%, transparent);
-  --komo-font: 'JetBrains Mono', 'Noto Sans JP', var(--font-interface), var(--font-text), sans-serif;
-  --komo-font-jp: 'Noto Sans JP', var(--font-interface), var(--font-text), sans-serif;
+  --komo-font: var(--font-text, var(--font-interface)), sans-serif;
+  --komo-font-jp: var(--font-text, var(--font-interface)), sans-serif;
   --komo-radius: 3px;
   --komo-gap: 14px;
   --komo-pad: 18px;
@@ -45,6 +56,7 @@
     linear-gradient(180deg, var(--komo-base) 0%, color-mix(in srgb, var(--komo-base) 92%, var(--background-secondary, #101118)) 100%);
   color: var(--komo-text);
   min-height: 100%;
+  font-size: var(--yh-type-body);
   font-family: var(--komo-font);
 }
 
@@ -132,7 +144,7 @@
   background: var(--komo-overlay);
   color: var(--komo-sub);
   font-family: var(--komo-font);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-file);
 }
 
 .yh-header-controls button:hover {
@@ -150,7 +162,7 @@
 }
 
 .yh-brand-title {
-  font-size: 1.55rem;
+  font-size: var(--yh-type-heading);
   font-weight: 700;
   color: var(--komo-sakura);
   letter-spacing: 0.08em;
@@ -164,13 +176,13 @@
 
 .yh-brand-subtitle {
   color: var(--komo-muted);
-  font-size: 0.72rem;
+  font-size: var(--yh-type-meta);
   letter-spacing: 0.08em;
 }
 
 .yh-brand-usage {
   color: var(--komo-sub);
-  font-size: 0.7rem;
+  font-size: var(--yh-type-meta);
   margin-top: 2px;
 }
 
@@ -219,7 +231,7 @@
 }
 
 .yh-time {
-  font-size: 2rem;
+  font-size: var(--yh-type-clock);
   font-weight: 700;
   color: var(--komo-text);
   line-height: 1;
@@ -228,7 +240,7 @@
 }
 
 .yh-date {
-  font-size: 0.74rem;
+  font-size: var(--yh-type-meta);
   color: var(--komo-muted);
   text-align: right;
   font-family: var(--komo-font-jp);
@@ -253,7 +265,7 @@
 .yh-period {
   color: var(--komo-green);
   font-family: var(--komo-font-jp);
-  font-size: 0.76rem;
+  font-size: var(--yh-type-meta);
   letter-spacing: 0.08em;
 }
 
@@ -269,7 +281,7 @@
   background: transparent;
   color: var(--komo-muted);
   font-family: var(--komo-font);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-file);
   letter-spacing: 0.04em;
   opacity: 0.64;
   transition: color 0.15s ease, opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
@@ -342,8 +354,8 @@
 .yh-settings-modal h2 {
   margin: 0 0 7px;
   color: var(--yh-modal-sakura);
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 1.24rem;
+  font-family: var(--font-text, var(--font-interface)), sans-serif;
+  font-size: var(--yh-type-heading);
   letter-spacing: 0.01em;
 }
 
@@ -351,8 +363,8 @@
 .yh-dashboard-settings-subtitle {
   margin-bottom: 14px;
   color: var(--yh-modal-muted);
-  font-family: 'JetBrains Mono', 'Noto Sans JP', monospace;
-  font-size: 0.7rem;
+  font-family: var(--font-text, var(--font-interface)), sans-serif;
+  font-size: var(--yh-type-meta);
 }
 
 .yh-settings-body {
@@ -393,15 +405,15 @@
 
 .yh-settings-body .setting-item-name {
   color: var(--yh-modal-text);
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 0.86rem;
+  font-family: var(--font-text, var(--font-interface)), sans-serif;
+  font-size: var(--yh-type-body);
 }
 
 .yh-settings-body .setting-item-description {
   margin-top: 4px;
   color: var(--yh-modal-muted);
-  font-family: 'JetBrains Mono', 'Noto Sans JP', monospace;
-  font-size: 0.64rem;
+  font-family: var(--font-text, var(--font-interface)), sans-serif;
+  font-size: var(--yh-type-meta);
   line-height: 1.45;
 }
 
@@ -422,7 +434,7 @@
   border-radius: 4px;
   background: var(--yh-modal-raised);
   color: var(--yh-modal-text);
-  font-family: 'JetBrains Mono', 'Noto Sans JP', monospace;
+  font-family: var(--font-text, var(--font-interface)), sans-serif;
   box-shadow: none;
   box-sizing: border-box;
 }
@@ -511,7 +523,7 @@
 .yh-selected-action-name {
   overflow: hidden;
   color: var(--yh-modal-text);
-  font-size: 0.78rem;
+  font-size: var(--yh-type-body);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -521,14 +533,14 @@
 .yh-system-actions-empty {
   margin-top: 2px;
   color: var(--yh-modal-muted);
-  font-family: 'JetBrains Mono', 'Noto Sans JP', monospace;
-  font-size: 0.66rem;
+  font-family: var(--font-text, var(--font-interface)), sans-serif;
+  font-size: var(--yh-type-meta);
   line-height: 1.35;
 }
 
 .yh-system-actions-label {
   margin-top: 0;
-  font-size: 0.7rem;
+  font-size: var(--yh-type-meta);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -568,7 +580,7 @@
   border-radius: 4px;
   background: transparent;
   color: var(--yh-modal-muted);
-  font-size: 0.65rem;
+  font-size: var(--yh-type-file);
 }
 
 .yh-system-add-command:hover,
@@ -600,14 +612,14 @@
 
 .suggestion-item .yh-command-suggest-name {
   color: var(--text-normal);
-  font-size: 0.9rem;
+  font-size: var(--font-text-size, 16px);
 }
 
 .suggestion-item .yh-command-suggest-id {
   margin-top: 3px;
   color: var(--text-muted);
-  font-family: 'JetBrains Mono', 'Noto Sans JP', monospace;
-  font-size: 0.68rem;
+  font-family: var(--font-text, var(--font-interface)), sans-serif;
+  font-size: calc(var(--font-text-size, 16px) * 0.75);
   overflow-wrap: anywhere;
 }
 
@@ -649,8 +661,8 @@
   height: 32px;
   padding: 0 14px;
   border-radius: 4px;
-  font-family: 'JetBrains Mono', 'Noto Sans JP', monospace;
-  font-size: 0.68rem;
+  font-family: var(--font-text, var(--font-interface)), sans-serif;
+  font-size: var(--yh-type-body);
   box-shadow: none;
 }
 
@@ -731,7 +743,7 @@
   gap: 8px;
   min-width: 0;
   color: var(--yh-modal-text);
-  font-size: 0.9rem;
+  font-size: var(--yh-type-title);
 }
 
 .yh-layout-title span:first-child {
@@ -746,13 +758,13 @@
   border-radius: 4px;
   background: rgba(180, 190, 254, 0.2);
   color: var(--yh-modal-green);
-  font-size: 0.62rem;
+  font-size: var(--yh-type-caption);
 }
 
 .yh-layout-meta {
   margin-top: 3px;
   color: var(--yh-modal-muted);
-  font-size: 0.68rem;
+  font-size: var(--yh-type-meta);
 }
 
 .yh-layout-actions {
@@ -770,7 +782,7 @@
   border-radius: 5px;
   background: var(--yh-modal-raised);
   color: var(--yh-modal-text);
-  font-size: 0.72rem;
+  font-size: var(--yh-type-body);
 }
 
 .yh-layout-actions button:hover,
@@ -787,7 +799,7 @@
 
 .yh-target-section-title {
   color: var(--yh-modal-muted);
-  font-size: 0.68rem;
+  font-size: var(--yh-type-title);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -828,12 +840,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.82rem;
+  font-size: var(--yh-type-body);
 }
 
 .yh-target-choice-type {
   color: var(--yh-modal-muted);
-  font-size: 0.62rem;
+  font-size: var(--yh-type-caption);
 }
 
 .yh-target-quick-row {
@@ -868,7 +880,7 @@
 .yh-time-log-title {
   overflow: hidden;
   color: var(--yh-modal-text);
-  font-size: 0.82rem;
+  font-size: var(--yh-type-body);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -879,7 +891,7 @@
   gap: 6px;
   margin-top: 4px;
   color: var(--yh-modal-muted);
-  font-size: 0.62rem;
+  font-size: var(--yh-type-meta);
 }
 
 .yh-time-log-meta span + span::before {
@@ -895,7 +907,7 @@
   border-radius: 5px;
   background: transparent;
   color: var(--yh-modal-muted);
-  font-size: 0.62rem;
+  font-size: var(--yh-type-body);
 }
 
 .yh-time-log-delete:hover {
@@ -934,13 +946,13 @@
 }
 
 .yh-stat-pill-num {
-  font-size: 0.84rem;
+  font-size: var(--yh-type-title);
   color: var(--komo-text);
   line-height: 1;
 }
 
 .yh-stat-pill-lbl {
-  font-size: 0.56rem;
+  font-size: var(--yh-type-caption);
   color: var(--komo-muted);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -972,12 +984,12 @@
 
 .yh-toolbar-compact .yh-toolbar-actions button {
   padding: 4px 9px;
-  font-size: 0.62rem;
+  font-size: var(--yh-type-body);
 }
 
 .yh-toolbar-label,
 .yh-toolbar-badge {
-  font-size: 0.62rem;
+  font-size: var(--yh-type-meta);
   color: var(--komo-muted);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1032,7 +1044,7 @@
   background: var(--komo-surface);
   color: var(--komo-muted);
   font-family: var(--komo-font-jp);
-  font-size: 0.68rem;
+  font-size: var(--yh-type-body);
   line-height: 1.45;
   text-align: center;
 }
@@ -1079,7 +1091,7 @@
   max-width: 100%;
   color: var(--komo-muted);
   font-family: var(--komo-font-jp);
-  font-size: inherit;
+  font-size: var(--yh-type-meta);
   line-height: 1.4;
   white-space: normal;
 }
@@ -1087,7 +1099,7 @@
 .yh-empty-subtitle {
   color: var(--komo-green);
   font-family: var(--komo-font-jp);
-  font-size: 0.62rem;
+  font-size: var(--yh-type-meta);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1169,7 +1181,7 @@
   border-radius: var(--komo-radius);
   background: var(--komo-overlay);
   color: var(--komo-green);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-body);
   pointer-events: none;
 }
 
@@ -1215,7 +1227,8 @@
 }
 
 .yh-card-title {
-  font-size: 0.6rem;
+  font-size: var(--yh-type-file);
+  line-height: 1.35;
   font-weight: 500;
   color: var(--komo-sakura);
   opacity: 0.8;
@@ -1252,7 +1265,7 @@
   background: var(--komo-overlay);
   color: var(--komo-sub);
   font-family: var(--komo-font);
-  font-size: 0.56rem;
+  font-size: var(--yh-type-file);
   box-shadow: none;
 }
 
@@ -1260,7 +1273,7 @@
   width: 30px;
   height: 30px;
   padding: 0;
-  font-size: 0.68rem;
+  font-size: var(--yh-type-body);
 }
 
 .yh-card-body {
@@ -1327,7 +1340,7 @@
 }
 
 .yh-widget-pomodoro .yh-pomo-time {
-  font-size: 2.2rem;
+  font-size: var(--yh-type-timer);
 }
 
 .yh-widget-pomodoro .yh-pomo-controls {
@@ -1359,7 +1372,7 @@
 }
 
 .yh-focus-text {
-  font-size: 0.74rem !important;
+  font-size: var(--yh-type-body) !important;
   font-weight: 400 !important;
   color: var(--komo-text) !important;
   outline: none;
@@ -1373,7 +1386,7 @@
 .yh-focus-text:empty::before {
   content: attr(data-placeholder);
   color: var(--komo-muted);
-  font-size: 0.74rem;
+  font-size: var(--yh-type-body);
   font-family: var(--komo-font-jp);
   font-weight: 300;
 }
@@ -1441,14 +1454,14 @@
 
 .yh-list-title {
   white-space: nowrap;
-  font-size: 0.76rem;
+  font-size: var(--yh-type-file);
   font-weight: 500;
 }
 
 .yh-task-text {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 0.74rem;
+  font-size: var(--yh-type-body);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1457,7 +1470,7 @@
 .yh-task-file,
 .yh-tech-node-meta {
   color: var(--komo-muted);
-  font-size: 0.66rem;
+  font-size: var(--yh-type-meta);
 }
 
 .yh-task-file {
@@ -1504,7 +1517,7 @@
 .yh-project-index {
   flex: 0 0 19px;
   color: var(--komo-muted);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1521,7 +1534,7 @@
 .yh-row-arrow {
   flex: 0 0 auto;
   color: var(--komo-muted);
-  font-size: 0.68rem;
+  font-size: var(--yh-type-caption);
   opacity: 0;
   transform: translate(-2px, 2px);
   transition: opacity 0.15s ease, transform 0.15s ease;
@@ -1558,7 +1571,7 @@
 }
 
 .yh-calendar-title {
-  font-size: 0.62rem;
+  font-size: var(--yh-type-body);
   color: var(--komo-sub);
   letter-spacing: 0.04em;
   font-family: var(--komo-font-jp);
@@ -1573,7 +1586,7 @@
 
 .yh-calendar-head {
   color: var(--komo-muted);
-  font-size: 0.52rem;
+  font-size: var(--yh-type-caption);
 }
 
 .yh-calendar-head .is-saturday,
@@ -1591,7 +1604,7 @@
   grid-template-rows: 1fr 5px;
   align-items: center;
   text-align: center;
-  font-size: 0.58rem;
+  font-size: var(--yh-type-file);
   color: var(--komo-sub);
   padding: 3px 2px;
   border-radius: 2px;
@@ -1654,7 +1667,7 @@
 }
 
 .yh-pomo-time {
-  font-size: 2.35rem;
+  font-size: var(--yh-type-timer);
   font-weight: 700;
   color: var(--komo-text);
   font-variant-numeric: tabular-nums;
@@ -1685,7 +1698,7 @@
 }
 
 .yh-pomo-meta {
-  font-size: 0.62rem;
+  font-size: var(--yh-type-meta);
   color: var(--komo-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1702,8 +1715,8 @@
   border-radius: 6px;
   background: rgba(180, 190, 254, 0.06);
   color: var(--komo-sub);
-  font-size: 0.66rem;
-  line-height: 1.25;
+  font-size: var(--yh-type-meta);
+  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1768,7 +1781,7 @@
   background: transparent;
   color: var(--komo-sub);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--yh-type-file);
   transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -1799,7 +1812,7 @@
   padding-top: 6px;
   border-top: 1px solid rgba(180, 190, 254, 0.1);
   box-sizing: border-box;
-  font-size: 0.58rem;
+  font-size: var(--yh-type-meta);
   color: var(--komo-muted);
 }
 
@@ -1839,7 +1852,7 @@
 .yh-music-service {
   overflow: hidden;
   color: var(--komo-text);
-  font-size: 0.82rem;
+  font-size: var(--yh-type-title);
   font-weight: 650;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -1850,7 +1863,7 @@
   margin-top: 5px;
   overflow: hidden;
   color: var(--komo-muted);
-  font-size: 0.53rem;
+  font-size: var(--yh-type-meta);
   letter-spacing: 0.08em;
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -1876,7 +1889,7 @@
   background: var(--komo-overlay);
   color: var(--komo-sub);
   font-family: var(--komo-font);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-file);
 }
 
 .yh-music-btn:hover {
@@ -1992,7 +2005,7 @@
 
 .yh-habit-today-head {
   color: var(--komo-muted);
-  font-size: 0.52rem;
+  font-size: var(--yh-type-caption);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -2070,7 +2083,7 @@
   margin-top: 7px;
   color: var(--komo-sub);
   font-family: var(--komo-font-jp);
-  font-size: 0.6rem;
+  font-size: var(--yh-type-caption);
 }
 
 .yh-forest-progress {
@@ -2137,7 +2150,7 @@
   border-radius: 50%;
   background: transparent;
   color: var(--komo-base);
-  font-size: 0.62rem;
+  font-size: var(--yh-type-body);
   line-height: 14px;
 }
 
@@ -2168,7 +2181,7 @@
   background: transparent;
   color: var(--komo-text);
   font-family: var(--komo-font-jp);
-  font-size: 0.66rem;
+  font-size: var(--yh-type-body);
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2225,7 +2238,7 @@
 .yh-habit-rate {
   margin-left: auto;
   color: var(--komo-muted);
-  font-size: 0.57rem;
+  font-size: var(--yh-type-caption);
 }
 
 .yh-forest-modal {
@@ -2239,7 +2252,7 @@
 .yh-forest-modal-subtitle {
   margin-top: -5px;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: var(--yh-type-meta);
 }
 
 .yh-forest-modal-header {
@@ -2260,7 +2273,7 @@
   background: var(--background-secondary);
   color: var(--text-muted);
   font-family: var(--font-monospace);
-  font-size: 0.72rem;
+  font-size: var(--yh-type-body);
   box-shadow: none;
 }
 
@@ -2273,11 +2286,11 @@
 
 .yh-habit-history-summary { display: flex; gap: 26px; margin-bottom: 13px; }
 .yh-habit-history-stat { display: flex; align-items: baseline; gap: 7px; }
-.yh-habit-history-value { color: var(--text-normal); font-size: 1rem; font-weight: 600; }
+.yh-habit-history-value { color: var(--text-normal); font-size: var(--yh-type-title); font-weight: 600; }
 .yh-habit-history-label {
   color: var(--text-faint);
   font-family: var(--font-monospace);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-caption);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -2303,7 +2316,7 @@
   gap: 4px;
   color: var(--text-faint);
   font-family: var(--font-monospace);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-caption);
 }
 .yh-heatmap-legend-cell {
   width: 9px;
@@ -2325,7 +2338,7 @@
   margin-top: 7px;
   color: var(--text-error);
   font-family: var(--komo-font);
-  font-size: 0.64rem;
+  font-size: var(--yh-type-body);
 }
 
 .yh-action-grid {
@@ -2354,7 +2367,7 @@
 .yh-action-section-title {
   margin-bottom: 5px;
   color: var(--komo-muted);
-  font-size: 0.54rem;
+  font-size: var(--yh-type-meta);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -2372,7 +2385,7 @@
   min-height: 34px;
   padding: 4px;
   overflow: hidden;
-  font-size: 0.5rem;
+  font-size: var(--yh-type-file);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2394,7 +2407,7 @@
   gap: 3px;
   padding: 7px 4px;
   text-align: center;
-  font-size: 0.53rem;
+  font-size: var(--yh-type-file);
   color: var(--komo-muted);
   letter-spacing: 0.06em;
   min-height: 44px;
@@ -2438,7 +2451,7 @@
 
 .yh-action-icon-fallback {
   color: var(--komo-green);
-  font-size: 0.62rem;
+  font-size: var(--yh-type-body);
   font-weight: 650;
   line-height: 1;
   opacity: 0.96;
@@ -2452,7 +2465,7 @@
   min-height: 34px;
   padding: 5px 7px;
   overflow: hidden;
-  font-size: 0.61rem;
+  font-size: var(--yh-type-file);
   text-align: left;
 }
 
@@ -2533,7 +2546,7 @@
 
 .yh-pulse-metric-num {
   color: var(--komo-text);
-  font-size: 1.62rem;
+  font-size: var(--yh-type-metric);
   font-weight: 760;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -2553,7 +2566,7 @@
 
 .yh-pulse-metric-unit {
   color: var(--komo-muted);
-  font-size: 0.56rem;
+  font-size: var(--yh-type-caption);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -2578,7 +2591,7 @@
   align-items: center;
   gap: 7px;
   color: var(--komo-sub);
-  font-size: 0.56rem;
+  font-size: var(--yh-type-meta);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -2592,7 +2605,7 @@
 
 .yh-pulse-metric-sub {
   color: var(--komo-muted);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-caption);
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2774,7 +2787,7 @@
   align-items: center;
   gap: 7px;
   color: var(--komo-sub);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-title);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2808,7 +2821,7 @@
 .yh-knowledge-stat-label,
 .yh-knowledge-recent-time {
   color: var(--komo-muted);
-  font-size: 0.5rem;
+  font-size: var(--yh-type-caption);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -2910,7 +2923,7 @@
 }
 
 .yh-widget-knowledge-profile.yh-size-w1h1 .yh-knowledge-stat-value {
-  font-size: 1rem;
+  font-size: calc(var(--font-text-size, 16px) * 1.25);
 }
 
 .yh-widget-knowledge-profile.yh-size-w1h1 .yh-knowledge-stat-label {
@@ -2945,7 +2958,7 @@
 .yh-widget-knowledge-profile:is(
   .yh-size-w2h1, .yh-size-w3h1, .yh-size-w4h1, .yh-size-w5h1
 ) .yh-knowledge-stat-value {
-  font-size: 1.05rem;
+  font-size: calc(var(--font-text-size, 16px) * 1.25);
 }
 
 .yh-widget-knowledge-profile:is(
@@ -2993,7 +3006,7 @@
 
 .yh-knowledge-stat-value {
   color: var(--komo-text);
-  font-size: 1.22rem;
+  font-size: var(--yh-type-heading);
   font-weight: 740;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -3042,7 +3055,7 @@
 .yh-knowledge-recent-name {
   overflow: hidden;
   color: var(--komo-sub);
-  font-size: 0.62rem;
+  font-size: var(--yh-type-file);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3103,7 +3116,7 @@
   gap: 5px;
   margin-bottom: 7px;
   color: var(--komo-sub);
-  font-size: 0.52rem;
+  font-size: var(--yh-type-title);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -3148,7 +3161,7 @@
 
 .yh-overview-value {
   color: var(--komo-text);
-  font-size: 1.05rem;
+  font-size: var(--yh-type-metric);
   font-weight: 700;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
@@ -3171,7 +3184,7 @@
   margin-top: 3px;
   overflow: hidden;
   color: var(--komo-muted);
-  font-size: 0.46rem;
+  font-size: var(--yh-type-body);
   letter-spacing: 0.06em;
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -3217,7 +3230,7 @@
   border: 1px solid color-mix(in srgb, var(--yh-accent) 30%, transparent);
   border-radius: var(--komo-radius);
   background: color-mix(in srgb, var(--yh-accent) 8%, transparent);
-  font-size: 0.72rem;
+  font-size: var(--yh-type-title);
   color: var(--komo-sakura);
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -3295,7 +3308,7 @@
 
 .yh-tech-node-title {
   overflow: hidden;
-  font-size: 0.72rem;
+  font-size: var(--yh-type-file);
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3352,7 +3365,7 @@
   background: transparent !important;
   color: var(--komo-sub) !important;
   font-family: var(--komo-font) !important;
-  font-size: 0.64rem !important;
+  font-size: var(--yh-type-body) !important;
   box-shadow: none !important;
 }
 
@@ -3386,7 +3399,7 @@
   background: var(--komo-overlay) !important;
   color: var(--komo-sub) !important;
   font-family: var(--komo-font) !important;
-  font-size: 0.72rem !important;
+  font-size: var(--yh-type-body) !important;
   box-shadow: none !important;
 }
 
@@ -3478,7 +3491,7 @@
   flex: 1 1 auto;
   overflow: hidden;
   color: var(--komo-muted);
-  font-size: 0.58rem;
+  font-size: var(--yh-type-caption);
   line-height: 1.4;
   letter-spacing: 0.04em;
   text-overflow: ellipsis;
@@ -3492,7 +3505,7 @@
   gap: 5px;
   flex: 0 0 auto;
   color: var(--komo-muted);
-  font-size: 0.5rem;
+  font-size: var(--yh-type-caption);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -3534,7 +3547,7 @@
 .yh-add-widget-shell .modal-title,
 .yh-add-widget-shell .yh-modal > h2 {
   color: var(--text-normal);
-  font-size: 1.3rem;
+  font-size: var(--yh-type-heading);
   line-height: 1.3;
 }
 
@@ -3554,7 +3567,7 @@
   overflow: hidden;
   color: var(--text-normal) !important;
   font-family: var(--font-interface);
-  font-size: 14px;
+  font-size: var(--yh-type-body);
   font-weight: 600;
   line-height: 1.35;
   opacity: 1;
@@ -3567,7 +3580,7 @@
   margin-top: 3px;
   overflow: hidden;
   color: var(--text-muted) !important;
-  font-size: 11px;
+  font-size: var(--yh-type-caption);
   line-height: 1.35;
   opacity: 1;
   text-overflow: ellipsis;
@@ -3607,7 +3620,7 @@
   }
 
   .yh-knowledge-stat-value {
-    font-size: 1.12rem;
+    font-size: calc(var(--font-text-size, 16px) * 1.25);
   }
 }
 
@@ -3769,7 +3782,7 @@
 
 .yh-time-flow-total {
   color: var(--komo-text);
-  font-size: 1.55rem;
+  font-size: var(--yh-type-metric);
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -3780,7 +3793,7 @@
   margin-top: 5px;
   color: var(--komo-muted);
   font-family: var(--komo-font-jp);
-  font-size: 0.62rem;
+  font-size: var(--yh-type-meta);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -3804,7 +3817,7 @@
   background: transparent;
   color: var(--komo-muted);
   font-family: var(--komo-font-jp);
-  font-size: 0.61rem;
+  font-size: var(--yh-type-file);
   letter-spacing: 0.04em;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
@@ -3850,21 +3863,21 @@
 .yh-time-flow-bucket-title {
   overflow: hidden;
   color: var(--komo-sub);
-  font-size: 0.68rem;
+  font-size: var(--yh-type-file);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .yh-time-flow-bucket-value {
   color: var(--komo-text);
-  font-size: 0.65rem;
+  font-size: var(--yh-type-title);
   font-variant-numeric: tabular-nums;
 }
 
 .yh-time-flow-empty-line {
   margin-top: 6px;
   color: var(--komo-muted);
-  font-size: 0.65rem;
+  font-size: var(--yh-type-meta);
 }
 
 .yh-time-flow-recent {
@@ -3968,3 +3981,152 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Follow the vault's reading typography; compact metadata stays one step smaller. */
+.yh-settings-shell, .yh-modal {
+  --komo-font: var(--font-text, var(--font-interface)), sans-serif;
+  --komo-font-jp: var(--font-text, var(--font-interface)), sans-serif;
+  font-family: var(--font-text, var(--font-interface));
+  font-size: var(--font-text-size, 16px);
+}
+.yh-view .yh-task-text, .yh-view .yh-focus-text {
+  font-size: var(--yh-type-body);
+  line-height: 1.5;
+}
+.yh-view .yh-time, .yh-view .yh-pomo-time {
+  font-family: var(--font-monospace);
+  font-variant-numeric: tabular-nums;
+}
+.yh-view .yh-task-file {
+  font-size: var(--yh-type-file);
+  display: block;
+  max-width: 100%;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: var(--text-muted);
+}
+.yh-view .yh-task-text, .yh-view .yh-list-title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.yh-view .yh-list-row { min-height: min-content; flex-shrink: 0; }
+.yh-view .yh-card-title { letter-spacing: 0.04em; opacity: 0.85; }
+.yh-view .yh-load-error, .yh-view .yh-widget-error {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 10px; color: var(--text-error); font-size: var(--yh-type-body);
+}
+.yh-time-log-filters { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+.yh-time-log-filters label { display: flex; flex-direction: column; gap: 4px; }
+/* Empty states are secondary information; stack actions rather than stretching a sentence across the card. */
+.yh-view .yh-empty:not(button) {
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+.yh-view .yh-empty button {
+  height: auto;
+  min-height: 28px;
+  padding: 5px 10px;
+  font-size: var(--yh-type-meta);
+  line-height: 1.35;
+}
+
+/* Native theme buttons can have a fixed input height. Bookmark tiles must fit both icon and text. */
+.yh-widget-bookmarks .yh-action-grid {
+  align-content: start;
+  grid-auto-rows: max-content;
+}
+.yh-widget-bookmarks .yh-action-btn {
+  min-width: 0;
+  height: auto;
+  min-height: calc(16px + var(--yh-type-meta) * 1.35 + 20px);
+  padding: 8px 6px;
+  gap: 4px;
+  box-sizing: border-box;
+}
+.yh-widget-bookmarks .yh-action-grid.is-compact .yh-action-btn {
+  min-height: calc(var(--yh-type-meta) * 1.35 + 16px);
+}
+.yh-widget-bookmarks .yh-action-label {
+  display: block;
+  flex: 0 0 auto;
+  min-width: 0;
+  font-size: var(--yh-type-meta);
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+/* Music card: artwork and transport, a full-width timeline, then the playlist. */
+.yh-widget-music-player { container: music-card / inline-size; }
+.yh-widget-music-player:not(.is-editing) > .yh-card-header { display: none; }
+.yh-widget-music-player.is-editing .yh-music-player-heading { display: none; }
+.yh-music-player { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 0; }
+.yh-music-player-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; min-height: 28px; }
+.yh-music-player-heading .yh-card-title { min-width: 0; overflow: hidden; white-space: nowrap; }
+.yh-music-links { display: flex; align-items: center; justify-content: flex-end; flex-wrap: nowrap; gap: 5px; }
+.yh-music-hero { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 16px; align-items: center; min-width: 0; }
+.yh-music-artwork { width: 76px; height: 72px; position: relative; }
+.yh-music-vinyl { position: absolute; width: 70px; height: 70px; right: -9px; top: 7px; border-radius: 50%; border: 1px solid var(--background-modifier-border); background: repeating-radial-gradient(circle, var(--background-primary) 0 3px, var(--background-secondary-alt) 4px 5px); }
+.yh-music-sleeve { display: grid; place-items: center; position: relative; width: 64px; height: 72px; border: 1px solid color-mix(in srgb, var(--yh-accent) 38%, transparent); border-radius: 9px; background: linear-gradient(145deg, color-mix(in srgb, var(--yh-accent) 35%, var(--background-primary)), var(--background-secondary)); color: var(--yh-accent); }
+.yh-music-sleeve svg { width: 28px; height: 28px; opacity: .8; }
+.yh-music-main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.yh-music-title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.yh-view .yh-music-current-track { flex: 1; min-width: 0; padding: 0; font-size: var(--yh-type-body); line-height: 1.4; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-normal); }
+.yh-music-waveform { display: flex; align-items: center; gap: 3px; height: 24px; overflow: hidden; }
+.yh-music-waveform span { flex: 0 0 2px; height: var(--wave-height); border-radius: 2px; background: var(--yh-accent); opacity: .5; }
+.yh-music-waveform span:nth-child(3n) { opacity: .25; }
+.yh-music-transport { display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 14px; min-height: 42px; }
+
+.yh-view .yh-music-control { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; min-width: 28px; padding: 5px; border-radius: 7px; border: 1px solid var(--komo-border); background: var(--komo-overlay); color: var(--text-muted); }
+.yh-music-control svg { width: 16px; height: 16px; }
+.yh-view .yh-music-control[aria-pressed=true] { color: var(--yh-accent); border-color: color-mix(in srgb, var(--yh-accent) 45%, transparent); }
+.yh-view .yh-music-play-primary { flex-basis: 38px; width: 38px; height: 38px; min-width: 38px; border-radius: 50%; background: var(--yh-accent); border-color: transparent; color: var(--text-on-accent); }
+.yh-music-play-primary svg { width: 20px; height: 20px; }
+.yh-music-player-bottom { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; min-width: 0; min-height: 18px; }
+.yh-music-player-bottom input[type=range] { flex: 1; min-width: 0; width: 100%; margin: 0; accent-color: var(--yh-accent); }
+.yh-music-elapsed { flex: 0 0 auto; font-size: var(--yh-type-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.yh-music-volume-row { display: flex; align-items: center; gap: 5px; margin-left: 5px; min-width: 0; color: var(--text-muted); }
+.yh-music-volume-row > span { display: flex; align-items: center; }
+.yh-music-volume-row svg { width: 13px; height: 13px; }
+.yh-music-volume-row input[type=range] { flex: 0 0 56px; width: 56px; height: 10px; margin: 0; accent-color: var(--yh-accent); }
+.yh-music-playlist { margin-top: 0; font-size: var(--yh-type-meta); border: 1px solid var(--komo-border); border-radius: 8px; background: var(--komo-overlay); padding: 7px 9px; }
+.yh-music-playlist summary { cursor: pointer; color: var(--text-normal); }
+.yh-music-playlist-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; min-width: 0; }
+.yh-view .yh-music-playlist-track { flex: 1; min-width: 0; height: auto; padding: 4px 6px; text-align: left; font-size: var(--yh-type-file); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yh-view .yh-music-playlist-track[aria-current=true] { font-weight: 600; color: var(--interactive-accent); }
+.yh-music-error { color: var(--text-error); font-size: var(--yh-type-meta); line-height: 1.4; }
+.yh-music-error[hidden] { display: none; }
+/* W1H2 and other narrow cards retain a single title row and balanced interior rhythm. */
+.yh-widget-music-player.yh-size-w1h2 .yh-music-player { gap: 12px; }
+.yh-widget-music-player.yh-size-w1h2 .yh-music-hero { grid-template-columns: 58px minmax(0, 1fr); gap: 12px; }
+.yh-widget-music-player.yh-size-w1h2 .yh-music-artwork { width: 58px; height: 64px; }
+.yh-widget-music-player.yh-size-w1h2 .yh-music-sleeve { width: 50px; height: 64px; }
+.yh-widget-music-player.yh-size-w1h2 .yh-music-vinyl { width: 54px; height: 54px; right: -5px; top: 5px; }
+.yh-widget-music-player.yh-size-w1h2 .yh-music-main { gap: 6px; }
+.yh-widget-music-player.yh-size-w1h2 .yh-music-transport { gap: 12px; }
+@container music-card (max-width: 350px) {
+  .yh-music-hero { grid-template-columns: 58px minmax(0, 1fr); gap: 12px; }
+  .yh-music-artwork { width: 58px; height: 64px; }
+  .yh-music-sleeve { width: 50px; height: 64px; }
+  .yh-music-vinyl { width: 54px; height: 54px; right: -5px; top: 5px; }
+  .yh-music-main { gap: 6px; }
+  .yh-music-transport { gap: 12px; }
+  .yh-music-player-bottom { gap: 5px; }
+  .yh-music-volume-row { margin-left: 3px; gap: 4px; }
+  .yh-music-volume-row input[type=range] { flex-basis: 40px; width: 40px; }
+}
+@container music-card (max-width: 220px) {
+  .yh-music-player-heading { gap: 5px; }
+  .yh-music-links { gap: 3px; }
+  .yh-music-links .yh-music-control { width: 24px; min-width: 24px; height: 24px; padding: 3px; }
+  .yh-music-transport { gap: 8px; }
+  .yh-music-volume-row input[type=range] { flex-basis: 28px; width: 28px; }
+}
+
+.yh-music-service-icon { display: block; width: 20px; height: 20px; object-fit: contain; }

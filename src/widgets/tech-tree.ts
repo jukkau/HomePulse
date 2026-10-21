@@ -85,6 +85,10 @@ export const techTreeWidget = {
       return;
     }
 
+    if (!data.nodes.length) {
+      renderEmpty(container, t(api.language, "noTechTree"), { label: t(api.language, "configureSources"), run: () => api.openSettings() });
+      return;
+    }
     const nodes = data.nodes.filter((node) => TREE_KINDS.has(String(node.kind || "").toLowerCase()));
     const nodeMap = new Map(nodes.map((node) => [node.id, node]));
     const childrenByParent = new Map();

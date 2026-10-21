@@ -102,7 +102,7 @@ export const statsOverviewWidget = {
     habitsViz.createDiv({ cls: "yh-pulse-metric-sub", text: habitSub });
 
     // Focus: today's time investment (numbers, not the focus statement itself).
-    const focusViz = card("focus", "flame", t(api.language, "focus"), `${snapshot.pomodoroMinutesToday}`, t(api.language, "minToday"));
+    const focusViz = card("focus", "flame", t(api.language, "focus"), `${Math.round(snapshot.pomodoroMinutesToday)}`, t(api.language, "minToday"));
     renderPomodoroRails(focusViz, snapshot.pomodoroToday);
     focusViz.createDiv({ cls: "yh-pulse-metric-sub", text: t(api.language, "pomodorosLogged", { count: snapshot.pomodoroToday }) });
 

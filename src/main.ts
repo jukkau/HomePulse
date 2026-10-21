@@ -14,6 +14,12 @@ import { buildResponsiveLayout, getResponsiveColumnCount } from "./layout/respon
 import { getResponsiveSpanClasses } from "./layout/responsive-classes";
 import { applySizePreset, toSizePreset } from "./layout/size-presets";
 import { normalizeLanguage, t, widgetName, widgetTitle } from "./i18n";
+import { MusicSession, resolveMusicSource } from "./services/music-playback";
+import { TaskContentIndex } from "./services/task-index";
+import { PersistenceQueue } from "./services/persistence";
+import { advancePomodoro } from "./services/pomodoro-clock";
+import { notifyPomodoroPhase } from "./widgets/pomodoro";
+import { confirmAction } from "./core/confirm-action";
 import { SnapshotBuilder } from "./services/snapshot-builder";
 import { ManualTimeRecordModal } from "./services/time/ManualTimeRecordModal";
 import { TimeLogListModal } from "./services/time/TimeLogListModal";
@@ -27,6 +33,7 @@ import { clamp, deepClone, mergeDefaults, normalizeArray, randomId } from "./cor
 import { formatSeconds } from "./widgets/widget-api";
 
 const {
+  Component,
   ItemView,
   Modal,
   Notice,
@@ -36,12 +43,6 @@ const {
   normalizePath
 } = require("obsidian");
 
-function stripHoverHints(root) {
-  root.querySelectorAll("[title]").forEach((element) => {
-    element.removeAttribute("title");
-  });
-  root.querySelectorAll("title").forEach((element) => element.remove());
-}
 
 function formatLongDate(date, language = "en") {
   return date.toLocaleDateString(normalizeLanguage(language), {
@@ -151,7 +152,7 @@ class LayoutManagerModal extends Modal {
         this.render();
       });
       if (!preset.isBuiltIn) {
-        const remove = actions.createEl("button", { cls: "yh-icon-btn danger", text: "×" });
+        const remove = actions.createEl("button", { cls: "yh-icon-btn danger", text: "×", attr: { "aria-label": this.plugin.t("delete") } });
         remove.addEventListener("click", async () => {
           await this.plugin.deleteLayoutPreset(preset.id);
           new Notice(this.plugin.t("layoutDeleted", { name: preset.name }));
@@ -212,6 +213,7 @@ class AddWidgetModal extends Modal {
         this.close();
       });
     }
+
   }
 }
 
@@ -589,6 +591,9 @@ class YukiHomepageView extends ItemView {
     this.renderToken = 0;
     this.draggingWidgetId = "";
     this.widgetUiState = {};
+    this.widgetRefreshers = new Map();
+    this.widgetComponents = new Map();
+    this.closed = false;
     this.intervals = [];
     this.resizeObserver = null;
     this.windowResizeHandler = null;
@@ -608,10 +613,14 @@ class YukiHomepageView extends ItemView {
   }
 
   async onOpen() {
+    this.closed = false;
     await this.renderView();
   }
 
   async onClose() {
+    this.closed = true;
+    this.renderToken += 1;
+    this.widgetRefreshers.clear();
     this.clearIntervals();
     this.disconnectResizeObserver();
   }
@@ -620,6 +629,8 @@ class YukiHomepageView extends ItemView {
     while (this.intervals.length) {
       window.clearInterval(this.intervals.pop());
     }
+    for (const component of this.widgetComponents.values()) this.removeChild(component);
+    this.widgetComponents.clear();
   }
 
   rememberInterval(id) {
@@ -653,24 +664,72 @@ class YukiHomepageView extends ItemView {
     this.resizeObserver.observe(frame);
   }
 
-  async renderView() {
+  widgetFingerprint(type, snapshot, widgetData) {
+    let dependency;
+    switch (type) {
+      case "tasks": dependency = [snapshot.fileSignature, snapshot.taskIndex.map(({ path, line, source }) => [path, line, source])]; break;
+      case "projects": dependency = [snapshot.fileSignature, snapshot.projectIndex.map(({ path, progress, mtime }) => [path, progress, mtime])]; break;
+      case "recent-notes": dependency = snapshot.files.map((file) => [file.path, file.stat.mtime]); break;
+      case "stats-overview": dependency = [snapshot.openTaskCount, snapshot.doneTaskCount, snapshot.habitDailyLast7, snapshot.habitTodayRate, snapshot.habitStreakDays, snapshot.pomodoroToday, snapshot.pomodoroMinutesToday, snapshot.notesDailyLast7, snapshot.notesThisWeek, snapshot.habitCompletedToday, snapshot.habitTotal]; break;
+      case "time-flow": dependency = this.plugin.data.timeLogs; break;
+      case "calendar": dependency = [...snapshot.dailyNotes].map(([date, files]) => [date, files.map((file) => file.path)]); break;
+      case "knowledge-profile": case "tech-tree": case "activity-history": dependency = snapshot.fileSignature; break;
+      default: dependency = null;
+    }
+    return JSON.stringify([widgetData, dependency, snapshot.now.toDateString(), this.plugin.data.settings]);
+  }
+
+  async renderView(options = {}) {
+    if (this.closed) return;
+    if (this.rendering) {
+      this.pendingRender = { incremental: this.pendingRender ? this.pendingRender.incremental && Boolean(options.incremental) : Boolean(options.incremental) };
+      return this.rendering;
+    }
+    this.rendering = this.renderViewNow(options);
+    try { await this.rendering; }
+    finally {
+      this.rendering = null;
+      const pending = this.pendingRender;
+      this.pendingRender = null;
+      if (pending && !this.closed) void this.renderView(pending);
+    }
+  }
+
+  async renderViewNow({ incremental = false } = {}) {
+    if (this.closed) return;
     const token = ++this.renderToken;
+    const container = this.contentEl;
+    let snapshot;
+    try {
+      snapshot = await this.plugin.loadSnapshot();
+    } catch (error) {
+      if (token !== this.renderToken || this.closed) return;
+      container.querySelector(".yh-load-error")?.remove();
+      const banner = container.createDiv({ cls: "yh-load-error", attr: { role: "alert" } });
+      banner.createSpan({ text: this.plugin.t("loadFailed") });
+      banner.createEl("button", { text: this.plugin.t("retry") }).addEventListener("click", () => void this.renderView({ incremental: true }));
+      return;
+    }
+    if (token !== this.renderToken || this.closed) return;
+    container.querySelector(".yh-load-error")?.remove();
+    if (incremental && this.widgetRefreshers.size) {
+      for (const refresh of this.widgetRefreshers.values()) {
+        if (token !== this.renderToken || this.closed) return;
+        await refresh(snapshot);
+      }
+      return;
+    }
+    const pageScroll = container.scrollTop;
     this.clearIntervals();
     this.disconnectResizeObserver();
-
-    const container = this.contentEl;
+    this.widgetRefreshers.clear();
+    this.fullRenderToken = token;
     container.empty();
     container.addClass("yh-view");
     const accentColor = getAccentCssValue(this.plugin.data.settings);
     container.style.setProperty("--yh-accent", accentColor);
     container.style.setProperty("--komo-sakura", accentColor);
-
     const frame = container.createDiv({ cls: "yh-frame" });
-    const loading = frame.createDiv({ cls: "yh-loading", text: this.plugin.t("loadingWidgets") });
-    const snapshot = await new SnapshotBuilder(this.app, this.plugin).load();
-    if (token !== this.renderToken) return;
-    loading.remove();
-
     const header = frame.createDiv({ cls: `yh-header ${this.editMode ? "is-editing" : ""}` });
     const brand = header.createDiv({ cls: "yh-brand" });
     brand.createDiv({ cls: "yh-brand-title", text: this.plugin.data.settings.profileName || this.plugin.t("yourName") });
@@ -880,11 +939,11 @@ class YukiHomepageView extends ItemView {
         }
         const settingsBtn = controls.createEl("button", {
           cls: "yh-icon-btn",
-          text: "⚙"
+          text: "⚙", attr: { "aria-label": this.plugin.t("configureWidget") }
         });
         const removeBtn = controls.createEl("button", {
           cls: "yh-icon-btn danger",
-          text: "×"
+          text: "×", attr: { "aria-label": this.plugin.t("removeWidget") }
         });
         widthSelect.addEventListener("click", (event) => {
           event.stopPropagation();
@@ -900,7 +959,7 @@ class YukiHomepageView extends ItemView {
         heightSelect.addEventListener("change", applyDimensions);
         settingsBtn.addEventListener("click", (event) => {
           event.stopPropagation();
-          this.openWidgetSettings(widget, widgetData, definition);
+          this.openWidgetSettings(widget, this.plugin.getWidgetData(widget.id, widget.type), definition);
         });
         removeBtn.addEventListener("click", async (event) => {
           event.stopPropagation();
@@ -912,25 +971,32 @@ class YukiHomepageView extends ItemView {
       // Minimal render surface. Widgets get Obsidian's `app`, their own data,
       // the shared snapshot, and a few scoped operations — but no direct handle
       // on the plugin or view internals.
+      let widgetIntervals = [];
       const api = {
         app: this.app,
         language: this.plugin.language,
         settings: this.plugin.data.settings,
         t: (key, vars = {}) => this.plugin.t(key, vars),
-        component: this,
+        component: null,
         widget,
         widgetData,
         snapshot,
-        rememberInterval: (id) => this.rememberInterval(id),
+        rememberInterval: (id) => { widgetIntervals.push(id); this.rememberInterval(id); },
         requestRender: () => this.renderView(),
         suppressVaultRefresh: (path) => this.plugin.suppressVaultRefresh(path),
         restoreVaultRefresh: (path) => this.plugin.restoreVaultRefresh(path),
+        syncTimer: () => this.plugin.tickPomodoro(),
+        getMusicSession: () => this.plugin.getMusicSession(widget.id),
         getState: () => this.plugin.getWidgetData(widget.id, widget.type).state,
         getConfig: () => this.plugin.getWidgetData(widget.id, widget.type).config,
         getTimeLogs: (query = {}) => this.plugin.getTimeLogService().query(query),
         createTimeLog: async (input) => this.plugin.getTimeLogService().create(input),
         updateTimeLog: async (id, patch) => this.plugin.getTimeLogService().update(id, patch),
-        deleteTimeLog: async (id) => this.plugin.getTimeLogService().delete(id),
+        deleteTimeLog: async (id) => this.plugin.deleteTimeLog(id),
+        refreshData: (path) => {
+          if (path) this.plugin.taskContentIndex.invalidate(path);
+          this.plugin.scheduleRefresh();
+        },
         getTimeSummary: (range = "all", now = new Date()) => this.plugin.getTimeAggregation().summarize(range, now),
         getUiState: () => (this.widgetUiState[widget.id] ||= {}),
         setUiState: (patch) => {
@@ -943,7 +1009,7 @@ class YukiHomepageView extends ItemView {
           await openExternalOrInternal(this.app, link);
         },
         openSettings: () => {
-          this.openWidgetSettings(widget, widgetData, definition);
+          this.openWidgetSettings(widget, this.plugin.getWidgetData(widget.id, widget.type), definition);
         },
         openManualTimeRecord: () => this.plugin.openManualTimeRecordModal(),
         openTimeLogList: () => this.plugin.openTimeLogListModal(),
@@ -957,13 +1023,61 @@ class YukiHomepageView extends ItemView {
         }
       };
 
-      try {
-        await definition.render(body, api);
-      } catch (error) {
-        body.createDiv({ cls: "yh-empty", text: this.plugin.t("widgetFailed", { message: error.message }) });
-      }
+      let lastFingerprint;
+      const refreshWidget = async (currentSnapshot) => {
+        if (this.closed || token !== this.fullRenderToken || !body.isConnected) return;
+        const currentData = this.plugin.getWidgetData(widget.id, widget.type);
+        const fingerprint = this.widgetFingerprint(widget.type, currentSnapshot, currentData);
+        if (fingerprint === lastFingerprint) return;
+        // Keep active editing and keyboard focus intact; retry once focus leaves.
+        if (body.contains(document.activeElement)) {
+          if (!body.hasAttribute("data-refresh-pending")) {
+            body.setAttribute("data-refresh-pending", "true");
+            body.addEventListener("focusout", () => {
+              body.removeAttribute("data-refresh-pending");
+              this.plugin.scheduleRefresh();
+            }, { once: true });
+          }
+          return;
+        }
+        const scrollPositions = [body, ...body.querySelectorAll("*")].map((el) => [el.scrollTop, el.scrollLeft]);
+        for (const id of widgetIntervals) window.clearInterval(id);
+        this.intervals = this.intervals.filter((id) => !widgetIntervals.includes(id));
+        widgetIntervals = [];
+        const previousComponent = this.widgetComponents.get(widget.id);
+        if (previousComponent) this.removeChild(previousComponent);
+        const component = this.addChild(new Component());
+        this.widgetComponents.set(widget.id, component);
+        api.component = component;
+        const staged = document.createElement("div");
+        api.snapshot = currentSnapshot;
+        api.widgetData = currentData;
+        try {
+          await definition.render(staged, api);
+          if (this.closed || token !== this.fullRenderToken) {
+            for (const id of widgetIntervals) window.clearInterval(id);
+            component.unload();
+            return;
+          }
+          body.replaceChildren(...staged.childNodes);
+          [body, ...body.querySelectorAll("*")].forEach((el, index) => {
+            if (scrollPositions[index]) { el.scrollTop = scrollPositions[index][0]; el.scrollLeft = scrollPositions[index][1]; }
+          });
+          lastFingerprint = fingerprint;
+        } catch (error) {
+          // Existing usable content stays visible if an individual widget fails.
+          body.querySelector(".yh-widget-error")?.remove();
+          const failure = body.createDiv({ cls: "yh-widget-error", attr: { role: "alert" } });
+          failure.createSpan({ text: this.plugin.t("widgetFailed", { message: error.message }) });
+          failure.createEl("button", { text: this.plugin.t("retry") }).addEventListener("click", () => void refreshWidget(api.snapshot));
+        }
+      };
+      this.widgetRefreshers.set(widget.id, refreshWidget);
+      await refreshWidget(snapshot);
+      if (token !== this.renderToken || this.closed) return;
     }
-    stripHoverHints(frame);
+    container.scrollTop = pageScroll;
+
     this.observeResponsiveLayout(frame, responsiveColumns);
   }
 
@@ -992,6 +1106,12 @@ class YukiHomepagePlugin extends Plugin {
   async onload() {
     this.registry = createWidgetRegistry(this);
     this.data = this.normalizeData(await this.loadData());
+    this.taskContentIndex = new TaskContentIndex();
+    this.musicSessions = new Map();
+    this.persistence = new PersistenceQueue(this.data, (data) => this.saveData(data));
+    this.clockBusy = false;
+    this.unloaded = false;
+    this.clockErrorAt = 0;
     this.refreshTimer = 0;
     this.suppressedVaultRefreshes = new Map();
     this.pomodoroStatusBarEl = this.addStatusBarItem();
@@ -1006,7 +1126,11 @@ class YukiHomepagePlugin extends Plugin {
       }
     });
     this.updatePomodoroStatusBar();
-    this.pomodoroStatusBarTimer = window.setInterval(() => this.updatePomodoroStatusBar(), 1000);
+    this.pomodoroStatusBarTimer = window.setInterval(() => {
+      void this.tickPomodoro();
+      this.updatePomodoroStatusBar();
+    }, 1000);
+    void this.tickPomodoro();
 
     this.registerView(VIEW_TYPE, (leaf) => new YukiHomepageView(leaf, this));
     this.openHomepageRibbonEl = this.addRibbonIcon(VIEW_ICON, this.t("openHomePulse"), () => {
@@ -1021,7 +1145,9 @@ class YukiHomepagePlugin extends Plugin {
     });
     this.addSettingTab(new YukiHomepageSettingTab(this.app, this));
 
-    const refresh = (file) => {
+    const refresh = (file, oldPath) => {
+      if (file?.path) this.taskContentIndex.invalidate(file.path);
+      if (oldPath) this.taskContentIndex.invalidate(oldPath);
       if (this.consumeSuppressedVaultRefresh(file?.path)) return;
       this.scheduleRefresh();
     };
@@ -1029,6 +1155,7 @@ class YukiHomepagePlugin extends Plugin {
     this.registerEvent(this.app.vault.on("modify", refresh));
     this.registerEvent(this.app.vault.on("delete", refresh));
     this.registerEvent(this.app.vault.on("rename", refresh));
+    this.registerEvent(this.app.metadataCache.on("changed", () => this.scheduleRefresh()));
 
     this.app.workspace.onLayoutReady(() => {
       if (!this.data.initialized) {
@@ -1041,6 +1168,9 @@ class YukiHomepagePlugin extends Plugin {
   }
 
   onunload() {
+    this.unloaded = true;
+    for (const session of this.musicSessions?.values() || []) session.dispose();
+    this.musicSessions?.clear();
     window.clearTimeout(this.refreshTimer);
     window.clearInterval(this.pomodoroStatusBarTimer);
   }
@@ -1058,7 +1188,7 @@ class YukiHomepagePlugin extends Plugin {
       ? Math.floor((Date.now() - state.phaseStartedAt) / 1000)
       : 0;
     const remaining = Math.max(0, (Number(state.remainingSeconds) || baseSeconds) - elapsed);
-    const label = status === "running"
+    const label = status === "paused" ? this.t("paused") : status === "running"
       ? this.t("pomodoroStatusFocus")
       : status === "break"
         ? this.t("pomodoroStatusBreak")
@@ -1104,7 +1234,68 @@ class YukiHomepagePlugin extends Plugin {
   }
 
   async persist() {
-    await this.saveData(this.data);
+    const snapshot = deepClone(this.data);
+    try {
+      await this.persistence.save(snapshot);
+    } catch (error) {
+      // Roll back only when no later action has changed this snapshot.
+      if (JSON.stringify(this.data) === JSON.stringify(snapshot)) this.data = deepClone(this.persistence.committed);
+      if (!this.saveErrorAt || Date.now() - this.saveErrorAt > 10000) {
+        this.saveErrorAt = Date.now();
+        new Notice(this.t("saveFailed"));
+      }
+      throw error;
+    }
+  }
+
+  async tickPomodoro() {
+    if (this.unloaded) return;
+    if (this.clockPromise) return this.clockPromise;
+    this.clockPromise = this.tickPomodoroNow();
+    try { await this.clockPromise; } finally { this.clockPromise = null; }
+  }
+
+  async tickPomodoroNow() {
+    if (this.unloaded) return;
+    this.clockBusy = true;
+    try {
+      const notifications = [];
+      let changed = false;
+      for (const widget of this.data.layout.widgets.filter((item) => item.type === "pomodoro")) {
+        const slot = this.getWidgetData(widget.id, widget.type);
+        const result = advancePomodoro(slot.state, slot.config);
+        if (JSON.stringify(result.state) === JSON.stringify(slot.state)) continue;
+        changed = true;
+        this.data.widgets[widget.id].state = validateWidgetState("pomodoro", result.state);
+        if (result.log) result.log.id = `${widget.id}-${result.log.id}`;
+        if (result.log && !(this.data.timeLogs || []).some((log) => log.id === result.log.id)) {
+          this.data.timeLogs = [result.log, ...(this.data.timeLogs || [])];
+        }
+        if (result.completed.length) notifications.push({ phase: result.state.status === "break" ? "break" : "idle", config: slot.config });
+      }
+      if (changed) {
+        await this.persist();
+        if (this.unloaded) return;
+        for (const { phase, config } of notifications) notifyPomodoroPhase(this.language, phase, Number(config.breakMinutes) || 5);
+        this.scheduleRefresh();
+      }
+    } catch (error) {
+      // The immutable persistence queue restores a failed transition for the next tick.
+      if (Date.now() - this.clockErrorAt > 30000) { this.clockErrorAt = Date.now(); console.error("HomePulse timer save failed", error); }
+    } finally {
+      this.clockBusy = false;
+    }
+  }
+
+  async deleteTimeLog(id) {
+    if (!await confirmAction(this.app, this.t("deleteTimeLog"), this.t("deleteTimeLogConfirm"), this.t("delete"), this.t("cancel"))) return false;
+    return this.getTimeLogService().delete(id);
+  }
+
+  getMusicSession(id) {
+    this.musicSessions ||= new Map();
+    if (!this.musicSessions.has(id)) this.musicSessions.set(id, new MusicSession(new Audio(), (source) => resolveMusicSource(this.app, source)));
+    return this.musicSessions.get(id);
   }
 
   getTimeLogService() {
@@ -1146,16 +1337,23 @@ class YukiHomepagePlugin extends Plugin {
       this.app,
       () => this.getTimeLogService().query(),
       async (id) => {
-        await this.getTimeLogService().delete(id);
+        return this.deleteTimeLog(id);
       },
       this.language
     ).open();
   }
 
+  loadSnapshot() {
+    if (!this.snapshotPromise) {
+      this.snapshotPromise = new SnapshotBuilder(this.app, this).load().finally(() => { this.snapshotPromise = null; });
+    }
+    return this.snapshotPromise;
+  }
+
   scheduleRefresh() {
     window.clearTimeout(this.refreshTimer);
     this.refreshTimer = window.setTimeout(() => {
-      this.refreshOpenViews();
+      this.refreshOpenViews(true);
     }, 250);
   }
 
@@ -1175,11 +1373,16 @@ class YukiHomepagePlugin extends Plugin {
     return expiresAt >= Date.now();
   }
 
-  refreshOpenViews() {
+  refreshOpenViews(incremental = false) {
+    for (const [id, session] of this.musicSessions || []) {
+      if (!this.data.layout.widgets.some((widget) => widget.id === id && widget.type === "music-player")) {
+        session.dispose(); this.musicSessions.delete(id);
+      }
+    }
     const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE);
     for (const leaf of leaves) {
       if (leaf.view instanceof YukiHomepageView) {
-        void leaf.view.renderView();
+        void leaf.view.renderView({ incremental });
       }
     }
   }
@@ -1347,6 +1550,13 @@ class YukiHomepagePlugin extends Plugin {
   }
 
   async removeWidget(id) {
+    const widget = this.data.layout.widgets.find((item) => item.id === id);
+    if (!widget) return;
+    const state = this.data.widgets[id]?.state || {};
+    const hasData = widget.type === "habits" ? Boolean(state.habits?.length || Object.keys(state.completions || {}).length)
+      : widget.type === "focus" ? Boolean(state.text?.trim())
+      : widget.type === "pomodoro" ? ["running", "paused", "break"].includes(state.status) : false;
+    if (hasData && !await confirmAction(this.app, this.t("removeWidget"), this.t("removeWidgetConfirm"), this.t("removeWidget"), this.t("cancel"))) return;
     const columns = clampLayoutColumns(this.data.layout.columns, 5);
     this.data.layout.widgets = this.data.layout.widgets.filter((widget) => widget.id !== id);
     delete this.data.widgets[id];

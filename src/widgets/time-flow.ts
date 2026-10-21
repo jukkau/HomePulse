@@ -114,8 +114,10 @@ function updateTimeFlowContent({ activeRange, metricTotal, metricMeta, bucketGri
     setIcon(remove, "trash-2");
     remove.addEventListener("click", async (event) => {
       event.stopPropagation();
-      await api.deleteTimeLog(log.id);
-      updateTimeFlowContent({ activeRange, metricTotal, metricMeta, bucketGrid, recent, api, recentLimit });
+      remove.disabled = true;
+      try {
+        if (await api.deleteTimeLog(log.id)) updateTimeFlowContent({ activeRange, metricTotal, metricMeta, bucketGrid, recent, api, recentLimit });
+      } finally { remove.disabled = false; }
     });
   }
 }

@@ -32,10 +32,14 @@ export class TimeAggregation {
 
   inRange(range: TimeRangeKey, now = new Date()): TimeLog[] {
     const { start, end } = getTimeRange(range, now);
-    return this.logs.filter((item) => {
-      if (start && item.endTime < start) return false;
-      if (end && item.startTime > end) return false;
-      return true;
+    return this.logs.flatMap((item) => {
+      const clippedStart = Math.max(item.startTime, start ?? -Infinity);
+      const clippedEnd = Math.min(item.endTime, end ?? Infinity);
+      if (clippedEnd <= clippedStart) return [];
+      if (clippedStart === item.startTime && clippedEnd === item.endTime) return [item];
+      // Preserve custom/rounded duration proportionally without double-counting boundaries.
+      return [{ ...item, startTime: clippedStart, endTime: clippedEnd,
+        duration: item.duration * (clippedEnd - clippedStart) / (item.endTime - item.startTime) }];
     });
   }
 

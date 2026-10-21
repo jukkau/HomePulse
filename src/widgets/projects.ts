@@ -36,13 +36,13 @@ export const projectsWidget = {
     });
     const items = api.snapshot.getProjects(filter, Number(api.widgetData.config.limit) || 10);
     if (!items.length) {
-      renderEmpty(container, t(api.language, "noProjectNotes"));
+      renderEmpty(container, t(api.language, "noProjectNotes"), { label: t(api.language, "configureSources"), run: () => api.openSettings() });
       return;
     }
     const list = container.createDiv({ cls: "yh-list yh-project-list" });
     for (const [index, item] of items.entries()) {
       const row = list.createEl("button", {
-        cls: "yh-list-row yh-project-row"
+        cls: "yh-list-row yh-project-row", attr: { title: item.name }
       });
       row.createDiv({ cls: "yh-project-index", text: String(index + 1).padStart(2, "0") });
       const left = row.createDiv({ cls: "yh-list-left" });

@@ -1,6 +1,35 @@
 export type HomepageLanguage = "zh-CN" | "en";
 
 const EN = {
+  musicSubtitle: "Play your favorite sounds",
+  musicFolder: "Music folder", musicFolderDesc: "Enter a full computer folder path, then generate the playlist. Reads audio files directly in this folder, ordered by filename; replaces the current draft list. Files are never deleted.",
+  musicGeneratePlaylist: "Generate playlist", musicScanFolder: "Read", musicScanDone: "{count} tracks", musicScanEmpty: "No supported audio files found in this folder.", musicScanFailed: "Cannot read this folder. Check its full path and access permissions.",
+  musicMode: "Playback order", musicSequential: "Sequential", musicShuffle: "Shuffle", musicRemoveTrack: "Remove from playlist",
+  musicOpenNetEase: "Open NetEase Cloud Music in browser", musicOpenQQ: "Open QQ Music in browser",
+
+  musicNoTracks: "Choose a music folder or local audio files to play here.", musicConfigure: "Configure music",
+  musicPlaylist: "Playlist", musicPlaylistDesc: "One track per line: name | full computer file path. Generate from a folder, choose files, or edit this list. Removing an entry never deletes the file. Use the separate NetEase / QQ icons to open their websites.",
+  musicAddLocal: "Add local audio", musicVaultFiles: "Choose from vault", musicComputerFiles: "Choose from computer",
+  musicPrevious: "Previous track", musicNext: "Next track", musicPlay: "Play", musicPause: "Pause",
+  musicPosition: "Playback position", musicVolume: "Volume", musicLoop: "Repeat playlist",
+  musicShareUnsupported: "This is a NetEase / QQ sharing page. Use an audio file or a playable audio URL instead.",
+  musicDesktopOnly: "Computer paths are available on desktop only. Choose a vault file on this device.",
+  musicFormatError: "Unsupported source. Choose an audio file or an HTTP(S) audio URL.",
+  musicMissing: "Audio file not found. Check its location in music settings.",
+  musicPlaybackError: "Playback failed. Check the file location, audio format, network or URL permissions, then press Play to retry.",
+  musicPathFallback: "Could not read the selected file path. Paste its full path into the playlist.",
+
+  taskChanged: "This task changed or has ambiguous duplicates. Refresh and retry, or complete it in the source note.",
+  saveFailed: "Could not save. Please check storage and retry.",
+  configureSources: "Configure sources", retry: "Retry", configureWidget: "Configure widget",
+  removeWidgetConfirm: "Removing this widget clears its settings and widget records, or stops its timer. You can add a fresh widget later. Saved time logs are kept.",
+  deleteTimeLogConfirm: "Delete this time record? This changes your time statistics and cannot be undone.",
+  pauseTimer: "Pause timer", startTimer: "Start or resume timer", resetTimer: "Reset timer",
+  changeFocusTarget: "Change focus target", openMusicSite: "Open music website", openMusicLink: "Open playback link",
+  earlier: "Previous", pageOf: "Page {page} of {total}", filterFrom: "From date", filterTo: "To date",
+  exportRecords: "Export records", loadFailed: "Could not read your notes. Your existing view has been kept. Retry to refresh.",
+  recordsFiltered: "{count} records",
+
   language: "Language",
   languageDesc: "Choose the HomePulse interface language.",
   simplifiedChinese: "简体中文",
@@ -324,6 +353,34 @@ const EN = {
 } as const;
 
 const ZH: Partial<Record<keyof typeof EN, string>> = {
+  musicSubtitle: "播放喜欢的声音",
+  musicFolder: "电脑音乐文件夹", musicFolderDesc: "填写电脑文件夹完整路径，再生成播放列表。仅读取该文件夹内的音频，按文件名排序，替换当前草稿列表；不会删除音乐文件。",
+  musicGeneratePlaylist: "生成播放列表", musicScanFolder: "读取", musicScanDone: "{count} 首", musicScanEmpty: "此文件夹中没有支持的音频文件。", musicScanFailed: "无法读取文件夹，请检查完整路径与访问权限。",
+  musicMode: "播放顺序", musicSequential: "顺序播放", musicShuffle: "随机播放", musicRemoveTrack: "从列表移除",
+  musicOpenNetEase: "在浏览器打开网易云音乐", musicOpenQQ: "在浏览器打开 QQ 音乐",
+
+  musicNoTracks: "配置电脑音乐路径，即可生成播放列表。", musicConfigure: "配置音乐",
+  musicPlaylist: "播放列表", musicPlaylistDesc: "每行一首：名称 | 电脑文件完整路径。可从文件夹生成、选择文件或直接编辑；移除条目不会删除音乐文件。网易云／QQ 音乐请用组件独立图标在浏览器打开。",
+  musicAddLocal: "添加本地音频", musicVaultFiles: "从知识库选择", musicComputerFiles: "从电脑选择",
+  musicPrevious: "上一首", musicNext: "下一首", musicPlay: "播放", musicPause: "暂停",
+  musicPosition: "播放进度", musicVolume: "音量", musicLoop: "循环播放列表",
+  musicShareUnsupported: "这是网易云／QQ 音乐分享页，请改用音频文件或可播放的音频直链。",
+  musicDesktopOnly: "电脑完整路径仅桌面端可用，请选择当前设备的知识库音频。",
+  musicFormatError: "暂不支持此来源，请选择音频文件或 HTTP(S) 音频地址。",
+  musicMissing: "音频文件不存在，请在音乐设置中检查文件位置。",
+  musicPlaybackError: "播放失败，请检查文件位置、音频格式、网络或链接权限，再点播放重试。",
+  musicPathFallback: "无法读取所选文件的路径，请将完整路径粘贴到播放列表。",
+
+  taskChanged: "任务已变化或存在同名歧义，请刷新后重试，或在源笔记中完成。",
+  saveFailed: "保存失败，请检查存储空间后重试。", configureSources: "配置数据来源", retry: "重试", configureWidget: "配置组件",
+  removeWidgetConfirm: "移除将清空此组件的配置、组件内记录或正在进行的计时。之后可以重新添加，已保存的时间记录会保留。",
+  deleteTimeLogConfirm: "删除这条时间记录？统计会同步改变，此操作无法撤销。",
+  pauseTimer: "暂停计时", startTimer: "开始或继续计时", resetTimer: "重置计时",
+  changeFocusTarget: "切换专注目标", openMusicSite: "打开音乐网站", openMusicLink: "打开播放链接",
+  earlier: "上一页", pageOf: "第 {page} / {total} 页", filterFrom: "开始日期", filterTo: "结束日期",
+  exportRecords: "导出记录", loadFailed: "读取笔记失败，已保留原有内容，请重试刷新。",
+  recordsFiltered: "共 {count} 条记录",
+
   language: "语言",
   languageDesc: "选择 HomePulse 的界面语言。",
   simplifiedChinese: "简体中文",

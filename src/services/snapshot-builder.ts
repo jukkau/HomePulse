@@ -35,6 +35,7 @@ export class SnapshotBuilder {
   app: LooseValue;
   plugin: LooseValue;
   files: LooseValue[];
+  fileSignature: string;
   projectFiles: LooseValue[];
   projectIndex: LooseValue[];
   taskIndex: LooseValue[];
@@ -63,6 +64,7 @@ export class SnapshotBuilder {
     this.app = app;
     this.plugin = plugin;
     this.files = [];
+    this.fileSignature = "";
     this.projectFiles = [];
     this.projectIndex = [];
     this.taskIndex = [];
@@ -89,6 +91,10 @@ export class SnapshotBuilder {
   async load(): Promise<this> {
     this.files = this.app.vault.getMarkdownFiles();
     this.projectFiles = this.files;
+    this.fileSignature = JSON.stringify(this.files.map((file) => {
+      const cache = this.app.metadataCache.getFileCache(file);
+      return [file.path, file.stat.mtime, file.stat.ctime, cache?.frontmatter, cache?.tags];
+    }));
     this.computeVaultUsage();
     this.indexDailyNotes();
     await this.indexProjectsAndTasks();
@@ -200,16 +206,12 @@ export class SnapshotBuilder {
   }
 
   async indexProjectsAndTasks(): Promise<void> {
+    this.plugin.taskContentIndex?.prune(new Set(this.files.map((file) => file.path)));
     const reads = await Promise.all(
       this.projectFiles.map(async (file) => {
         const cache = this.app.metadataCache.getFileCache(file) || {};
-        let content = "";
-        try {
-          content = await this.app.vault.cachedRead(file);
-        } catch (error) {
-          content = "";
-        }
-        return { file, cache, content };
+        const tasks = await this.plugin.taskContentIndex.read(file, () => this.app.vault.cachedRead(file));
+        return { file, cache, tasks };
       })
     );
 
@@ -223,23 +225,12 @@ export class SnapshotBuilder {
         mtime: entry.file.stat.mtime
       });
 
-      const taskRegex = /^\s*[-*]\s+\[( |x)\]\s+(.+)$/gm;
-      let match = taskRegex.exec(entry.content);
-      while (match) {
-        if (match[1] === " ") {
+      for (const task of entry.tasks) {
+        if (!task.checked) {
           this.openTaskCount += 1;
-          this.taskIndex.push({
-            path: entry.file.path,
-            file: entry.file,
-            name: entry.file.basename,
-            text: stripTaskText(match[2]),
-            line: entry.content.slice(0, match.index).split("\n").length,
-            source: match[0]
-          });
-        } else {
-          this.doneTaskCount += 1;
-        }
-        match = taskRegex.exec(entry.content);
+          this.taskIndex.push({ path: entry.file.path, file: entry.file, name: entry.file.basename,
+            text: stripTaskText(task.text), line: task.line, source: task.source, occurrences: task.occurrences, originalContent: task.originalContent });
+        } else this.doneTaskCount += 1;
       }
     }
   }

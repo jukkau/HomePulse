@@ -108,7 +108,7 @@ export const activityHistoryWidget = {
     const scheduleRefresh = () => {
       if (refreshQueued) return;
       refreshQueued = true;
-      window.requestAnimationFrame(() => {
+      const animationFrame = window.requestAnimationFrame(() => {
         refreshQueued = false;
         applyConfiguredYear();
         refreshStatus();
@@ -146,14 +146,15 @@ export const activityHistoryWidget = {
     api.component.register(() => observer.disconnect());
     applyConfiguredYear();
     refreshStatus();
-    window.requestAnimationFrame(() => {
+    const animationFrame = window.requestAnimationFrame(() => {
       applyConfiguredYear();
       refreshStatus();
     });
-    window.setTimeout(() => {
+    const timeout = window.setTimeout(() => {
       applyConfiguredYear();
       refreshStatus();
     }, 250);
+    api.component.register(() => { window.cancelAnimationFrame(animationFrame); window.clearTimeout(timeout); });
   },
   renderSettings(container, draft, ctx) {
     new Setting(container).setName(t(ctx.language, "title")).addText((text) => {

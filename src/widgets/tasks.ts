@@ -4,6 +4,7 @@ import { ALL_SIZE_PRESETS } from "../layout/size-presets";
 import { t } from "../i18n";
 import { getInheritedProjectFolders, readProjectFilterConfig, renderProjectFilterSettings, withInheritedProjectFolders } from "../services/project-filter";
 import { renderEmpty } from "./widget-api";
+import { parseTasks } from "../services/task-index";
 
 const { Notice, Setting } = require("obsidian");
 
@@ -11,16 +12,14 @@ export function markTaskComplete(content, task) {
   const text = String(content || "");
   const newline = text.includes("\r\n") ? "\r\n" : "\n";
   const lines = text.split(newline);
-  const lineIndex = Number(task.line) - 1;
   const source = String(task.source || "").replace(/\r$/, "");
-  if (lineIndex >= 0 && lineIndex < lines.length && lines[lineIndex] === source) {
-    lines[lineIndex] = lines[lineIndex].replace(/(\[) (\])/, "$1x$2");
-    return lines.join(newline);
-  }
-
-  const fallbackIndex = lines.findIndex((line) => line === source);
-  if (fallbackIndex < 0) return null;
-  lines[fallbackIndex] = lines[fallbackIndex].replace(/(\[) (\])/, "$1x$2");
+  const candidates = parseTasks(text).filter((item) => !item.checked && item.source === source);
+  // Repeated tasks can use their indexed position only against the exact original document.
+  const unchanged = task.originalContent === text;
+  if (!unchanged && (candidates.length !== 1 || task.occurrences > 1)) return null;
+  const target = unchanged ? candidates.find((item) => item.line === Number(task.line)) : candidates[0];
+  if (!target) return null;
+  lines[target.line - 1] = lines[target.line - 1].replace(/^(\s*[-*+]\s+\[) (\])/, "$1x$2");
   return lines.join(newline);
 }
 
@@ -45,7 +44,7 @@ export const tasksWidget = {
     });
     const tasks = api.snapshot.getOpenTasks(filter, Number(api.widgetData.config.limit) || 12);
     if (!tasks.length) {
-      renderEmpty(container, t(api.language, "noOpenTasks"));
+      renderEmpty(container, t(api.language, "noOpenTasks"), { label: t(api.language, "configureSources"), run: () => api.openSettings() });
       return;
     }
     const list = container.createDiv({ cls: "yh-task-list" });
@@ -57,9 +56,9 @@ export const tasksWidget = {
       });
       const content = row.createDiv({ cls: "yh-task-content" });
       content.createDiv({ cls: "yh-task-text", text: task.text });
-      const fileEl = content.createDiv({ cls: "yh-task-file", text: task.name });
-      fileEl.attr("role", "button");
-      fileEl.attr("aria-label", t(api.language, "jumpToSource"));
+      const fileEl = content.createEl("button", { cls: "yh-task-file", text: task.name, attr: { type: "button", title: task.path } });
+      fileEl.setAttr("role", "button");
+      fileEl.setAttr("aria-label", t(api.language, "jumpToSource"));
       fileEl.addEventListener("click", async (event) => {
         event.stopPropagation();
         try {
@@ -92,16 +91,18 @@ export const tasksWidget = {
           api.suppressVaultRefresh(task.path);
           await api.app.vault.process(file, (content) => {
             const updated = markTaskComplete(content, task);
-            if (updated === null) throw new Error("Task changed before it could be completed.");
+            if (updated === null) throw new Error(t(api.language, "taskChanged"));
             return updated;
           });
           saved = true;
+          api.refreshData(task.path);
           row.addClass("is-completing");
           window.setTimeout(() => row.remove(), 180);
         } catch (error) {
           if (!saved) api.restoreVaultRefresh(task.path);
           row.removeClass("is-completing");
           check.disabled = false;
+          api.refreshData(task.path);
           new Notice(error.message || String(error));
         }
       });

@@ -12,7 +12,7 @@ function createId(): string {
   return `timelog-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function toTimeLog(input: TimeLogInput, id = createId(), createdAt = Date.now()): TimeLog {
+export function toTimeLog(input: TimeLogInput, id = createId(), createdAt = Date.now()): TimeLog {
   const duration = Math.max(1, Math.round((input.endTime - input.startTime) / 60000));
   const base: TimeLog = {
     id,

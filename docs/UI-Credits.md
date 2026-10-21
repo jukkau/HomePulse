@@ -18,3 +18,11 @@ Original design and authorship belong to their respective creators. The original
 This credit is also included in:
 - styles.css (header comment)
 - README.md (致谢 section)
+
+
+## Music service marks
+
+The music card uses official website favicons solely to identify browser links to each service. They are bundled locally; their trademarks remain with the respective owners.
+
+- NetEase Cloud Music: https://s1.music.126.net/style/favicon.ico
+- QQ Music: https://y.qq.com/favicon.ico

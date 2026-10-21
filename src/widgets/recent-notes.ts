@@ -45,7 +45,7 @@ export const recentNotesWidget = {
 
     const list = container.createDiv({ cls: "yh-list yh-recent-notes-list" });
     for (const [index, file] of recent.entries()) {
-      const row = list.createEl("button", { cls: "yh-list-row yh-recent-notes-row" });
+      const row = list.createEl("button", { cls: "yh-list-row yh-recent-notes-row", attr: { title: file.basename } });
       row.createDiv({ cls: "yh-project-index", text: String(index + 1).padStart(2, "0") });
       const left = row.createDiv({ cls: "yh-list-left" });
       left.createDiv({ cls: "yh-list-title", text: displayName(file) });
