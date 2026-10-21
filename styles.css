@@ -1460,6 +1460,16 @@
   font-size: 0.66rem;
 }
 
+.yh-task-file {
+  cursor: pointer;
+}
+
+.yh-task-file:hover {
+  color: var(--yh-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .yh-task-check {
   width: 15px;
   height: 15px;

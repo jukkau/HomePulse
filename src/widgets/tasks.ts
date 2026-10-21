@@ -57,7 +57,31 @@ export const tasksWidget = {
       });
       const content = row.createDiv({ cls: "yh-task-content" });
       content.createDiv({ cls: "yh-task-text", text: task.text });
-      content.createDiv({ cls: "yh-task-file", text: task.name });
+      const fileEl = content.createDiv({ cls: "yh-task-file", text: task.name });
+      fileEl.attr("role", "button");
+      fileEl.attr("aria-label", t(api.language, "jumpToSource"));
+      fileEl.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        try {
+          const file = api.app.vault.getAbstractFileByPath(task.path);
+          if (!file || !file.path) throw new Error("Task file not found.");
+          const leaf = api.app.workspace.getLeaf("tab");
+          await leaf.openFile(file);
+          const view = leaf.view;
+          if (view && view.editor) {
+            const line = Number(task.line) - 1;
+            const editor = view.editor;
+            if (line >= 0 && line < editor.lineCount()) {
+              window.setTimeout(() => {
+                editor.setCursor({ line, ch: 0 });
+                editor.scrollIntoView({ from: { line, ch: 0 }, to: { line, ch: 0 } }, true);
+              }, 100);
+            }
+          }
+        } catch (error) {
+          new Notice(error.message || String(error));
+        }
+      });
       check.addEventListener("click", async () => {
         if (check.disabled) return;
         check.disabled = true;

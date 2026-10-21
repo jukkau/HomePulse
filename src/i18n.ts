@@ -250,6 +250,7 @@ const EN = {
   sevenDayNoteRhythm: "7-day note rhythm",
   done: "done",
   taskCounts: "{open} open · {done} done",
+  jumpToSource: "Open source file",
 
   areaFolder: "Area folder",
   areaFolderDesc: "Optional. Overrides the global Area folder for this widget.",
@@ -412,6 +413,7 @@ const ZH: Partial<Record<keyof typeof EN, string>> = {
   habitsToday: "今天", habitStreak: "已连续打卡 {count} 天", habitsCompleted: "已完成 {done}/{total} 个习惯",
   unitToday: "今天", minToday: "今日分钟", pomodorosLogged: "已记录 {count} 个番茄钟", thisWeek: "本周",
   sevenDayNoteRhythm: "近 7 天笔记节奏", done: "已完成", taskCounts: "{open} 个未完成 · {done} 个已完成",
+  jumpToSource: "打开源文件",
 
   areaFolder: "领域文件夹", areaFolderDesc: "可选；为此组件覆盖全局领域文件夹。", noTechTree: "暂无能力树数据。",
   sourcePath: "来源路径", sourcePathDesc: "使用 / 表示整个知识库。", year: "年份", yearDesc: "四位数字；留空使用当前年份。",
