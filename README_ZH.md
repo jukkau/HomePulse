@@ -46,7 +46,7 @@ HomePulse 同时支持 Obsidian 的深色和浅色主题，会跟随主题背景
 | **Music Player** | 打开配置的音乐服务登录页或播放页 |
 | **Bookmarks** | 支持 `label\|url` 或单行 URL 的快捷书签 |
 | **System** | 支持命令和 Daily Note 等快捷动作 |
-| **Activity History** | 基于 Vault 文件修改时间生成活跃热力图 |
+| **Activity History** | 基于 Vault 文件修改时间生成活跃热力图——由社区插件 **Activity History** 渲染（见「依赖和隐私」） |
 | **Tech Tree** | 基于 Value → Area → Project 关系自动生成能力地图，无需额外维护元数据源文件 |
 | **Execution Pulse** | 汇总习惯、Focus、知识增长和任务状态，反馈近期执行情况 |
 | **Knowledge Profile** | 展示笔记、Area、项目和标签等知识资产概览 |
@@ -82,10 +82,11 @@ HomePulse 内置本地 TimeLog 记录层，不依赖外部服务。
 
 ## 依赖和隐私
 
-HomePulse 不依赖其他 Obsidian 社区插件。Dashboard 数据主要来自本地 Markdown 文件、frontmatter、任务 checkbox 和文件修改时间。
+HomePulse 的核心功能不依赖其他 Obsidian 社区插件。**唯一例外：**「Activity History」组件嵌入一段 `ActivityHistory` 代码块，由可选的社区插件 **Activity History** 负责渲染。未安装该插件时，此组件只会显示为普通代码块，不会渲染热力图。
 
 | 插件 | 是否需要 | 使用场景 |
 |---|---|---|
+| **Activity History** | 可选社区插件 | 仅「Activity History」组件需要；用于渲染基于文件活跃度的嵌入式热力图。未安装时该组件退化为代码块。 |
 | **Daily Notes** | 可选核心插件 | 仅当 System 项使用 `daily-note` 动作时需要；未启用时只有该按钮不可用。 |
 | **QuickAdd** | 可选社区插件 | 仅当 System 组件中的按钮配置为执行 QuickAdd 提供的命令时需要。 |
 | **cMenu** | 不需要 | HomePulse 不依赖 cMenu。 |

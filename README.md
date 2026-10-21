@@ -46,7 +46,7 @@ The homepage editing toolbar includes:
 | **Music Player** | Opens a configured music service login or playback page |
 | **Bookmarks** | Quick bookmarks using `label\|url` entries or direct URL lines |
 | **System** | Commands and Daily Note shortcuts |
-| **Activity History** | Activity heatmap based on vault file modification times |
+| **Activity History** | Activity heatmap based on vault file modification times — rendered by the community plugin **Activity History** (see Dependencies) |
 | **Tech Tree** | Capability map auto-generated from Value → Area → Project relationships, with no separate metadata file to maintain |
 | **Execution Pulse** | Recent execution status across habits, Focus, knowledge growth, and tasks |
 | **Knowledge Profile** | Overview of notes, Areas, projects, tags, and other knowledge assets |
@@ -82,10 +82,11 @@ HomePulse includes a local TimeLog layer that does not depend on external servic
 
 ## Dependencies and Privacy
 
-HomePulse does not require other Obsidian community plugins. Dashboard data is read primarily from local Markdown files, frontmatter, task checkboxes, and file modification times.
+HomePulse does not require other Obsidian community plugins for its core features. **One exception:** the **Activity History** widget embeds an `ActivityHistory` code block that is rendered by the optional community plugin **Activity History**. Without it, that widget shows as a plain code block and no heatmap is rendered.
 
 | Plugin | Requirement | When it is used |
 |---|---|---|
+| **Activity History** | Optional community plugin | Required only for the **Activity History** widget; it renders the embedded heatmap from vault file activity. Without it, the widget falls back to a code block. |
 | **Daily Notes** | Optional core plugin | Needed only when a System item uses the `daily-note` action; without it, only that button is unavailable. |
 | **QuickAdd** | Optional community plugin | Needed only when a System widget button is configured to run a QuickAdd command. |
 | **cMenu** | Not required | HomePulse does not depend on cMenu. |
