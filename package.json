@@ -1,25 +1,25 @@
-{
-  "name": "homepulse",
-  "version": "1.0.6",
-  "description": "A component-based personal homepage dashboard with widgets, layouts, and knowledge workflow tools.",
-  "main": "main.js",
-  "scripts": {
-    "build": "node esbuild.config.mjs production",
-    "dev": "node esbuild.config.mjs",
-    "check": "tsc --noEmit",
-    "smoke": "node scripts/run-smoke.mjs"
-  },
-  "keywords": [
-    "obsidian",
-    "plugin",
-    "dashboard"
-  ],
-  "author": "Yuki",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^24.0.0",
-    "esbuild": "^0.25.0",
-    "obsidian": "^1.8.7",
-    "typescript": "^5.8.0"
-  }
+﻿{
+    "name":  "homepulse",
+    "version":  "1.0.7",
+    "description":  "A component-based personal homepage dashboard with widgets, layouts, and knowledge workflow tools.",
+    "main":  "main.js",
+    "scripts":  {
+                    "build":  "node esbuild.config.mjs production",
+                    "dev":  "node esbuild.config.mjs",
+                    "check":  "tsc --noEmit",
+                    "smoke":  "node scripts/run-smoke.mjs"
+                },
+    "keywords":  [
+                     "obsidian",
+                     "plugin",
+                     "dashboard"
+                 ],
+    "author":  "Yuki",
+    "license":  "MIT",
+    "devDependencies":  {
+                            "@types/node":  "^24.0.0",
+                            "esbuild":  "^0.25.0",
+                            "obsidian":  "^1.8.7",
+                            "typescript":  "^5.8.0"
+                        }
 }
