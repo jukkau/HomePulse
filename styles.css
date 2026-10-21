@@ -33,8 +33,8 @@
   --komo-sub: var(--text-muted, #a6adc8);
   --komo-muted: var(--text-faint, #585b70);
   --komo-faint: color-mix(in srgb, var(--text-faint, #313244) 68%, transparent);
-  --komo-font: 'JetBrains Mono', 'Noto Sans JP', monospace;
-  --komo-font-jp: 'Noto Sans JP', sans-serif;
+  --komo-font: 'JetBrains Mono', 'Noto Sans JP', var(--font-interface), var(--font-text), sans-serif;
+  --komo-font-jp: 'Noto Sans JP', var(--font-interface), var(--font-text), sans-serif;
   --komo-radius: 3px;
   --komo-gap: 14px;
   --komo-pad: 18px;
