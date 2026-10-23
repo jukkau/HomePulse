@@ -75,14 +75,14 @@
 .yh-view input,
 .yh-view select,
 .yh-view textarea {
-  box-shadow: none !important;
-  background-image: none !important;
+  box-shadow: none;
+  background-image: none;
 }
 
 .yh-view button:hover,
 .yh-view button:active,
 .yh-view button:focus-visible {
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .yh-view button:focus-visible,
@@ -91,7 +91,7 @@
 .yh-settings-shell button:focus-visible,
 .yh-settings-shell input:focus-visible,
 .yh-settings-shell select:focus-visible {
-  outline: 2px solid var(--interactive-accent, #b4befe) !important;
+  outline: 2px solid var(--interactive-accent, #b4befe);
   outline-offset: 2px;
 }
 
@@ -286,11 +286,11 @@
   min-height: 24px;
   gap: 4px;
   padding: 2px 4px;
-  border: 1px solid transparent !important;
+  border: 1px solid transparent;
   border-radius: var(--komo-radius);
-  background: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
   color: var(--text-muted);
   font-family: var(--font-interface);
   font-size: var(--yh-type-caption);
@@ -303,14 +303,14 @@
 
 .yh-view .yh-header .yh-header-config-btn:hover,
 .yh-view .yh-header .yh-header-config-btn:focus-visible {
-  background: color-mix(in srgb, var(--text-normal) 4%, transparent) !important;
+  background: color-mix(in srgb, var(--text-normal) 4%, transparent);
   color: var(--text-normal);
   opacity: 1;
   transform: none;
 }
 
 .yh-view .yh-header .yh-header-config-btn.is-active {
-  background: transparent !important;
+  background: transparent;
   color: var(--yh-accent);
   opacity: 1;
 }
@@ -475,12 +475,12 @@
 }
 
 .yh-system-layout-select {
-  min-width: 128px !important;
+  min-width: 128px;
   height: 32px;
-  padding: 0 9px !important;
-  appearance: auto !important;
-  background: var(--yh-modal-raised) !important;
-  background-image: none !important;
+  padding: 0 9px;
+  appearance: auto;
+  background: var(--yh-modal-raised);
+  background-image: none;
 }
 
 .yh-system-actions-manager {
@@ -637,9 +637,9 @@
 
 .yh-settings-body select.dropdown {
   padding-right: 32px;
-  background-repeat: no-repeat !important;
-  background-position: right 10px center !important;
-  background-size: 14px !important;
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
 }
 
 .yh-settings-body input:focus,
@@ -1292,8 +1292,6 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(137, 180, 250, 0.28) transparent;
 }
 
 .yh-card-body::-webkit-scrollbar,
@@ -1366,13 +1364,13 @@
   width: max(32px, var(--yh-control-compact));
   height: max(32px, var(--yh-control-compact));
   min-width: max(32px, var(--yh-control-compact));
-  padding: 0 !important;
-  border: 1px solid transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
 }
 .yh-widget-pomodoro .yh-pomo-btn:hover {
-  background: color-mix(in srgb, var(--yh-accent) 8%, transparent) !important;
+  background: color-mix(in srgb, var(--yh-accent) 8%, transparent);
   color: var(--text-normal);
 }
 .yh-widget-pomodoro .yh-pomo-btn-primary {
@@ -1380,11 +1378,11 @@
   height: var(--yh-control-primary);
   min-width: var(--yh-control-primary);
   border-radius: 50%;
-  background: var(--yh-accent) !important;
+  background: var(--yh-accent);
   color: var(--text-on-accent);
 }
 .yh-widget-pomodoro .yh-pomo-btn-primary:hover {
-  background: var(--yh-accent) !important;
+  background: var(--yh-accent);
   filter: brightness(1.08);
 }
 .yh-pomo-btn svg {
@@ -2898,8 +2896,7 @@
   grid-template-columns: 30px minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-content: center;
-  column-gap: 9px;
-  row-gap: 2px;
+  gap: 2px 9px;
   padding: 8px 10px;
 }
 
@@ -3346,7 +3343,7 @@
 
 .yh-tech-node:hover {
   transform: translateX(2px);
-  background: var(--komo-overlay) !important;
+  background: var(--komo-overlay);
   border-color: var(--komo-border-hover);
   box-shadow: none;
 }
@@ -3595,7 +3592,7 @@
 .yh-widget-picker-title {
   width: 100%;
   overflow: hidden;
-  color: var(--text-normal) !important;
+  color: var(--text-normal);
   font-family: var(--font-interface);
   font-size: var(--yh-type-body);
   font-weight: 600;
@@ -3609,7 +3606,7 @@
   width: 100%;
   margin-top: 3px;
   overflow: hidden;
-  color: var(--text-muted) !important;
+  color: var(--text-muted);
   font-size: var(--yh-type-caption);
   line-height: 1.35;
   opacity: 1;
@@ -3955,11 +3952,11 @@
  * dense dashboard widgets and prevent host-theme button fills from becoming
  * opaque color blocks. */
 .yh-view .yh-calendar-cell:not(.is-today) {
-  background: transparent !important;
+  background: transparent;
 }
 
 .yh-view .yh-calendar-cell.is-today {
-  background: color-mix(in srgb, var(--yh-accent) 9%, transparent) !important;
+  background: color-mix(in srgb, var(--yh-accent) 9%, transparent);
 }
 
 .yh-view .yh-overview-group {
