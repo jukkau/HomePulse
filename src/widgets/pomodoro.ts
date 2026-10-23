@@ -26,7 +26,7 @@ async function requestSystemNotificationPermission() {
   if (Notification.permission !== "default") return Notification.permission;
   try {
     return await Notification.requestPermission();
-  } catch (_) {
+  } catch {
     return "denied";
   }
 }
@@ -42,7 +42,7 @@ export function notifyPomodoroPhase(language, phase, breakMinutes) {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   try {
     new Notification(title, { body, silent: false });
-  } catch (_) {
+  } catch {
     // Obsidian's in-app notice remains available when OS notifications fail.
   }
 }

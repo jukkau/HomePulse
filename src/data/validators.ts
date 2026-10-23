@@ -4,7 +4,7 @@
 import { DEFAULT_ACTIVE_PROJECT_TAGS, DEFAULT_PROJECT_NAME_PREFIXES } from "../constants";
 import { parseLineList, parseQuickActions, normalizeArray } from "../widgets/widget-api";
 import { isKnownSizePreset } from "../layout/size-presets";
-import type { TimeLog, TimeLogActivityType, TimeLogSource, TimeLogTargetType } from "../types";
+import type { HomepageSettings, TimeLog, TimeLogActivityType, TimeLogSource, TimeLogTargetType } from "../types";
 
 const POMO_STATUS = new Set(["idle", "running", "paused", "break"]);
 const QUICK_ACTION_TYPES = new Set(["command", "url", "daily-note"]);
@@ -27,31 +27,31 @@ export function clampNumber(value: LooseValue, min: number, max: number, fallbac
   return Math.max(min, Math.min(max, n));
 }
 
-export function asString(value: LooseValue, fallback = ""): string {
-  if (value == null) return fallback;
+export function asString(value: LooseValue, fallback: LooseValue = ""): string {
+  if (value == null) return String(fallback);
   return String(value);
 }
 
 export function asStringArray(value: LooseValue, fallback: LooseValue = []): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
   if (typeof value === "string") return parseLineList(value);
-  return Array.isArray(fallback) ? fallback.slice() : [];
+  return Array.isArray(fallback) ? fallback.map(String) : [];
 }
 
-export function asPlainObject(value: LooseValue, fallback: LooseValue = {}): LooseValue {
-  if (value && typeof value === "object" && !Array.isArray(value)) return value;
-  return fallback && typeof fallback === "object" ? { ...fallback } : {};
+export function asPlainObject(value: LooseValue, fallback: LooseValue = {}): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  return fallback && typeof fallback === "object" ? ({ ...fallback } as Record<string, unknown>) : {};
 }
 
 /**
  * Validate a single layout widget entry. Returns a cleaned partial or null if unusable.
  */
-export function validateLayoutWidget(widget: LooseValue): LooseValue {
+export function validateLayoutWidget(widget: LooseValue): { id: string | null; type: string; x: number; y: number; sizePreset: string } | null {
   if (!widget || typeof widget !== "object") return null;
   const type = asString(widget.type).trim();
   if (!type) return null;
   const id = asString(widget.id).trim() || null;
-  const sizePreset = isKnownSizePreset(widget.sizePreset) ? widget.sizePreset : "W2H2";
+  const sizePreset = isKnownSizePreset(widget.sizePreset) ? String(widget.sizePreset) : "W2H2";
   return {
     id,
     type,
@@ -64,7 +64,7 @@ export function validateLayoutWidget(widget: LooseValue): LooseValue {
 /**
  * Type-aware config validation. Falls back field-by-field to definition.defaultConfig.
  */
-export function validateWidgetConfig(type: string, config: LooseValue, defaultConfig: LooseValue = {}): LooseValue {
+export function validateWidgetConfig(type: string, config: LooseValue, defaultConfig: LooseValue = {}): Record<string, unknown> {
   const base = asPlainObject(defaultConfig, {});
   const raw = asPlainObject(config, {});
   const next = { ...base, ...raw };
@@ -72,7 +72,7 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
   switch (type) {
     case "focus":
       next.title = asString(raw.title, base.title || "today's goal");
-      if (next.title.trim().toLowerCase() === "focus today") {
+      if (String(next.title).trim().toLowerCase() === "focus today") {
         next.title = "today's goal";
       }
       next.placeholder = asString(raw.placeholder, base.placeholder || "");
@@ -138,7 +138,7 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
       const variant = raw.variant ?? base.variant;
       next.variant = variant === "compact" ? "compact" : "grid";
       next.useFavicons = raw.useFavicons === true;
-      const items = Array.isArray(raw.items) ? raw.items : base.items || [];
+      const items: unknown[] = Array.isArray(raw.items) ? raw.items : (Array.isArray(base.items) ? base.items : []);
       next.items = items
         .map((item: LooseValue) => {
           if (!item || typeof item !== "object") return null;
@@ -160,11 +160,11 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
       next.variant = variant === "stack" ? "stack" : variant === "compact" ? "compact" : "grid";
       next.sectionTitle = asString(raw.sectionTitle, base.sectionTitle || "");
       next.secondaryTitle = asString(raw.secondaryTitle, base.secondaryTitle || "");
-      const items = Array.isArray(raw.items) ? raw.items : base.items || [];
+      const items: unknown[] = Array.isArray(raw.items) ? raw.items : (Array.isArray(base.items) ? base.items : []);
       next.items = items
         .map((item: LooseValue) => {
           if (!item || typeof item !== "object") return null;
-          const actionType = QUICK_ACTION_TYPES.has(item.type) ? item.type : "command";
+          const actionType = QUICK_ACTION_TYPES.has(String(item.type)) ? String(item.type) : "command";
           return {
             label: asString(item.label, "action").trim() || "action",
             type: actionType,
@@ -172,11 +172,11 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
           };
         })
         .filter(Boolean);
-      const secondaryItems = Array.isArray(raw.secondaryItems) ? raw.secondaryItems : base.secondaryItems || [];
+      const secondaryItems: unknown[] = Array.isArray(raw.secondaryItems) ? raw.secondaryItems : (Array.isArray(base.secondaryItems) ? base.secondaryItems : []);
       next.secondaryItems = secondaryItems
         .map((item: LooseValue) => {
           if (!item || typeof item !== "object") return null;
-          const actionType = QUICK_ACTION_TYPES.has(item.type) ? item.type : "command";
+          const actionType = QUICK_ACTION_TYPES.has(String(item.type)) ? String(item.type) : "command";
           return {
             label: asString(item.label, "action").trim() || "action",
             type: actionType,
@@ -189,7 +189,7 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
 
     case "stats-overview":
       next.title = asString(raw.title, base.title || "execution pulse");
-      if (next.title.trim().toLowerCase() === "execution overview") {
+      if (String(next.title).trim().toLowerCase() === "execution overview") {
         next.title = "execution pulse";
       }
       delete next.metrics;
@@ -244,7 +244,7 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
 /**
  * Type-aware state validation. Falls back field-by-field to definition.defaultState.
  */
-export function validateWidgetState(type: string, state: LooseValue, defaultState: LooseValue = {}): LooseValue {
+export function validateWidgetState(type: string, state: LooseValue, defaultState: LooseValue = {}): Record<string, unknown> {
   const base = asPlainObject(defaultState, {});
   const raw = asPlainObject(state, {});
 
@@ -256,8 +256,8 @@ export function validateWidgetState(type: string, state: LooseValue, defaultStat
 
     case "pomodoro": {
       const workMinutes = 25;
-      const status = POMO_STATUS.has(raw.status) ? raw.status : base.status || "idle";
-      const next: LooseValue = {
+      const status = POMO_STATUS.has(raw.status as string) ? String(raw.status) : base.status || "idle";
+      const next: Record<string, unknown> = {
         status,
         pausedPhase: raw.pausedPhase === "break" ? "break" : "work",
         sessionId: asString(raw.sessionId, ""),
@@ -300,25 +300,24 @@ export function validateWidgetState(type: string, state: LooseValue, defaultStat
 /**
  * Validate a full stored widget slot { config, state }.
  */
-export function validateWidgetStoredData(type: string, stored: LooseValue, definition: LooseValue): LooseValue {
+export function validateWidgetStoredData(type: string, stored: LooseValue, definition: LooseValue): Record<string, unknown> {
   const slot = asPlainObject(stored, {});
-  const defaultConfig = definition ? definition.defaultConfig : {};
-  const defaultState = definition ? definition.defaultState : {};
+  const def = asPlainObject(definition, {});
   return {
-    config: validateWidgetConfig(type, slot.config, defaultConfig),
-    state: validateWidgetState(type, slot.state, defaultState)
+    config: validateWidgetConfig(type, slot.config, def.defaultConfig),
+    state: validateWidgetState(type, slot.state, def.defaultState)
   };
 }
 
 /**
  * Validate settings object against defaults.
  */
-export function validateSettings(settings: LooseValue, defaults: LooseValue): LooseValue {
+export function validateSettings(settings: LooseValue, defaults: LooseValue): HomepageSettings {
   const base = asPlainObject(defaults, {});
   const raw = asPlainObject(settings, {});
   const rawAccent = asString(raw.accentColor, "");
   const explicitMode = raw.accentColorMode === "custom" || raw.accentColorMode === "theme"
-    ? raw.accentColorMode
+    ? String(raw.accentColorMode)
     : null;
   const accentColorMode = explicitMode || (HEX_COLOR.test(rawAccent) && rawAccent.toLowerCase() !== "#f5c2e7" ? "custom" : "theme");
   return {
@@ -342,8 +341,8 @@ export function validateTimeLog(raw: LooseValue): TimeLog | null {
   const item = asPlainObject(raw, null);
   if (!item) return null;
 
-  const source = TIME_LOG_SOURCES.has(item.source) ? item.source : null;
-  const targetType = TIME_LOG_TARGET_TYPES.has(item.targetType) ? item.targetType : null;
+  const source = TIME_LOG_SOURCES.has(item.source as TimeLogSource) ? item.source as TimeLogSource : null;
+  const targetType = TIME_LOG_TARGET_TYPES.has(item.targetType as TimeLogTargetType) ? item.targetType as TimeLogTargetType : null;
   if (!source || !targetType) return null;
 
   const startTime = clampNumber(item.startTime, 0, Number.MAX_SAFE_INTEGER, 0);
@@ -369,8 +368,8 @@ export function validateTimeLog(raw: LooseValue): TimeLog | null {
   const note = asString(item.note, "").trim();
   if (note) next.note = note;
 
-  if (TIME_LOG_ACTIVITY_TYPES.has(item.activityType)) {
-    next.activityType = item.activityType;
+  if (TIME_LOG_ACTIVITY_TYPES.has(item.activityType as TimeLogActivityType)) {
+    next.activityType = item.activityType as TimeLogActivityType;
   }
 
   if (targetType === "project") {
@@ -403,14 +402,14 @@ function normalizeTimeTargetId(targetType: TimeLogTargetType, value: LooseValue)
   return asString(value, "").trim();
 }
 
-function validatePomodoroTarget(raw: LooseValue): LooseValue | null {
+function validatePomodoroTarget(raw: LooseValue): { type: TimeLogTargetType; id: string; title: string; areaId?: string; areaTitle?: string } | null {
   const item = asPlainObject(raw, null);
   if (!item) return null;
-  const type = TIME_LOG_TARGET_TYPES.has(item.type) ? item.type : null;
+  const type = TIME_LOG_TARGET_TYPES.has(item.type as TimeLogTargetType) ? item.type as TimeLogTargetType : null;
   const id = type === "task" ? asString(item.id, "QuickCapture").trim() : asString(item.id, "").trim();
   const title = type === "task" ? asString(item.title, id || "QuickCapture").trim() : asString(item.title, id).trim();
   if (!type || !id || !title) return null;
-  const next: LooseValue = { type, id, title };
+  const next: { type: TimeLogTargetType; id: string; title: string; areaId?: string; areaTitle?: string } = { type, id, title };
   if (type === "project") {
     const areaId = asString(item.areaId, "").trim();
     if (areaId) {

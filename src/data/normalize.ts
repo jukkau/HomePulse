@@ -6,13 +6,13 @@ import {
   validateTimeLogs,
   validateWidgetStoredData
 } from "./validators";
-import type { DefinitionResolver, HomepageLayoutPreset, PluginData, WidgetLayoutItem } from "../types";
+import type { DefinitionResolver, HomepageLayout, HomepageLayoutPreset, PluginData, WidgetLayoutItem } from "../types";
 
 type NormalizeDeps = {
-  mergeDefaults: (base: LooseValue, saved: LooseValue) => LooseValue;
+  mergeDefaults: <T>(base: T, saved: unknown) => T;
   normalizeArray: (value: LooseValue, fallback: LooseValue) => LooseValue[];
   randomId: (prefix: string) => string;
-  applySizePreset: (widget: LooseValue, preset: string, columns: number) => WidgetLayoutItem;
+  applySizePreset: (widget: WidgetLayoutItem, preset: string, columns: number) => WidgetLayoutItem;
   packLayout: (items: WidgetLayoutItem[], columns: number) => WidgetLayoutItem[];
   deepClone: <T>(value: T) => T;
   getDefinition: DefinitionResolver;
@@ -28,7 +28,7 @@ export function normalizeData(saved: unknown, deps: NormalizeDeps): PluginData {
 }
 
 function validateAndFillDefaults(migrated: LooseValue, deps: NormalizeDeps): PluginData {
-  const data = deps.mergeDefaults(DEFAULT_DATA, migrated || {});
+  const data = deps.mergeDefaults(DEFAULT_DATA, migrated || {}) as PluginData;
 
   data.schemaVersion = CURRENT_SCHEMA_VERSION;
   data.settings = validateSettings(data.settings, DEFAULT_DATA.settings);
@@ -69,12 +69,16 @@ function validateAndFillDefaults(migrated: LooseValue, deps: NormalizeDeps): Plu
   return data;
 }
 
-function normalizeLayout(rawLayout: LooseValue, fallbackLayout: LooseValue, deps: NormalizeDeps): LooseValue {
-  const layout = rawLayout && typeof rawLayout === "object" ? rawLayout : fallbackLayout;
-  const columns = clampLayoutColumns(layout.columns, fallbackLayout.columns || 5);
-  const rawWidgets = deps.normalizeArray(layout.widgets, fallbackLayout.widgets);
+function normalizeLayout(rawLayout: LooseValue, fallbackLayout: LooseValue, deps: NormalizeDeps): HomepageLayout {
+  const raw = (rawLayout && typeof rawLayout === "object" ? rawLayout : fallbackLayout) as Record<string, unknown> | null;
+  const fallback = (fallbackLayout && typeof fallbackLayout === "object" ? fallbackLayout : {}) as Record<string, unknown>;
+  const columns = clampLayoutColumns(raw?.columns ?? fallback.columns, fallback.columns || 5);
+  const rawWidgets = deps.normalizeArray(
+    raw?.widgets ?? fallback.widgets,
+    Array.isArray(fallback.widgets) ? fallback.widgets : []
+  );
   const widgets = rawWidgets
-    .map((widget) => {
+    .map((widget: LooseValue) => {
       const cleaned = validateLayoutWidget(widget);
       if (!cleaned) return null;
       const next = {
@@ -101,7 +105,7 @@ function clampLayoutColumns(value: LooseValue, fallback = 5): number {
 }
 
 function normalizeLayoutPresets(data: LooseValue, deps: NormalizeDeps): HomepageLayoutPreset[] {
-  const builtIn = (DEFAULT_DATA.layoutPresets || []).map((preset: LooseValue) => ({
+  const builtIn = (DEFAULT_DATA.layoutPresets || []).map((preset) => ({
     id: preset.id,
     name: preset.name,
     isBuiltIn: true,
@@ -110,28 +114,30 @@ function normalizeLayoutPresets(data: LooseValue, deps: NormalizeDeps): Homepage
   }));
   const seen = new Set<string>(builtIn.map((preset) => preset.id));
   const presets: HomepageLayoutPreset[] = [...builtIn];
-  const rawPresets = Array.isArray(data.layoutPresets) ? data.layoutPresets : [];
+  const obj = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  const rawPresets = Array.isArray(obj.layoutPresets) ? obj.layoutPresets : [];
 
   for (const raw of rawPresets) {
     if (!raw || typeof raw !== "object") continue;
-    const id = String(raw.id || "").trim() || deps.randomId("layout");
+    const entry = raw as Record<string, unknown>;
+    const id = String(entry.id || "").trim() || deps.randomId("layout");
     if (!id || seen.has(id)) continue;
-    const name = String(raw.name || "").trim() || "Untitled layout";
+    const name = String(entry.name || "").trim() || "Untitled layout";
     presets.push({
       id,
       name,
-      updatedAt: Number(raw.updatedAt) || Date.now(),
-      layout: normalizeLayout(raw.layout, DEFAULT_DATA.layout, deps)
+      updatedAt: Number(entry.updatedAt) || Date.now(),
+      layout: normalizeLayout(entry.layout, DEFAULT_DATA.layout, deps)
     });
     seen.add(id);
   }
 
-  if (data.defaultLayout && !seen.has("saved-default")) {
+  if (obj.defaultLayout && !seen.has("saved-default")) {
     presets.push({
       id: "saved-default",
       name: "Saved default",
       updatedAt: Date.now(),
-      layout: normalizeLayout(data.defaultLayout, DEFAULT_DATA.layout, deps)
+      layout: normalizeLayout(obj.defaultLayout, DEFAULT_DATA.layout, deps)
     });
   }
 

@@ -11,7 +11,7 @@ export type WidgetLayoutItem = {
   y: number;
   w?: number;
   h?: number;
-  sizePreset: SizePresetName | string;
+  sizePreset: string;
 };
 
 export type HomepageSettings = {
@@ -96,7 +96,7 @@ export type WidgetDefinition = {
   displayName: string;
   shell: WidgetShell;
   allowedSizes: string[];
-  defaultSize: SizePresetName | string;
+  defaultSize: string;
   defaultConfig: Record<string, unknown>;
   defaultState: Record<string, unknown>;
   render: (api: Record<string, LooseValue>, containerEl: HTMLElement) => void | Promise<void>;

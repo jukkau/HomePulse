@@ -1,17 +1,40 @@
-import { Modal, Setting, Notice } from "obsidian";
-const { normalizePath } = require("obsidian");
+import { Modal, Setting, Notice, normalizePath } from "obsidian";
+import type { App } from "obsidian";
+import type { PluginData, WidgetLayoutItem } from "../types";
 
 /**
  * Steps: 1. Homepage name, 2. Projects folder, 3. Areas folder,
  *        4. Optional checkboxes: Tasks, Projects, Habits, Tech Tree
  * On completion the wizard sets data.initialized = true and persists.
  */
+
+type WizardPlugin = {
+  language: string;
+  t: (key: string, vars?: Record<string, unknown>) => string;
+  data: PluginData;
+  persist: () => Promise<void>;
+  normalizeData: (data: LooseValue) => PluginData;
+  updatePersistentUiLanguage?: () => void;
+  refreshOpenViews: () => void;
+};
+
+type WizardConfig = {
+  language: string;
+  profileName: string;
+  projectsPath: string;
+  areasPath: string;
+  enableTasks: boolean;
+  enableProjects: boolean;
+  enableHabits: boolean;
+  enableTechTree: boolean;
+};
+
 export class SetupWizardModal extends Modal {
 
-  plugin: LooseValue;
+  plugin: WizardPlugin;
   step: number = 1;
   totalSteps: number = 4;
-  config: Record<string, LooseValue> = {
+  config: WizardConfig = {
     language: "en",
     profileName: "My Homepage",
     projectsPath: "",
@@ -22,7 +45,7 @@ export class SetupWizardModal extends Modal {
     enableTechTree: true
   };
 
-  constructor(app: LooseValue, plugin: LooseValue) {
+  constructor(app: App, plugin: WizardPlugin) {
     super(app);
     this.plugin = plugin;
     this.config.language = plugin.language;
@@ -60,7 +83,7 @@ export class SetupWizardModal extends Modal {
         dropdown.onChange(async (value) => {
           const hadDefaultName = this.config.profileName === "My Homepage" || this.config.profileName === "我的首页";
           this.config.language = value;
-          this.plugin.data.settings.language = value;
+          this.plugin.data.settings.language = value === "zh-CN" ? "zh-CN" : "en";
           await this.plugin.persist();
           this.plugin.updatePersistentUiLanguage?.();
           if (hadDefaultName) this.config.profileName = this.plugin.t("myHomepage");
@@ -138,7 +161,7 @@ export class SetupWizardModal extends Modal {
   async finish(): Promise<void> {
     const data = this.plugin.data;
     data.initialized = true;
-    data.settings.language = this.config.language;
+    data.settings.language = this.config.language === "zh-CN" ? "zh-CN" : "en";
     data.settings.profileName = this.config.profileName;
 
     const projectsPath = normalizePath(this.config.projectsPath || "");
@@ -169,13 +192,15 @@ export class SetupWizardModal extends Modal {
 
     if (disabledTypes.length) {
       const keepIds = new Set(
-        data.layout.widgets.filter((w: LooseValue) => !disabledTypes.includes(w.type)).map((w: LooseValue) => w.id)
+        data.layout.widgets.filter((w) => !disabledTypes.includes(w.type)).map((w) => w.id)
       );
-      data.layout.widgets = data.layout.widgets.filter((w: LooseValue) => keepIds.has(w.id));
+      data.layout.widgets = data.layout.widgets.filter((w) => keepIds.has(w.id));
       for (const id of Object.keys(data.widgets)) {
         if (!keepIds.has(id)) delete data.widgets[id];
       }
-      const { packLayout } = require("../layout/pack-layout");
+      const { packLayout } = require("../layout/pack-layout") as {
+        packLayout: (items: WidgetLayoutItem[], columns: number, preferred?: Record<string, { x: number; y: number }>, priorityIds?: string[], compact?: boolean, denseCompact?: boolean, preservePriorityPositions?: boolean) => WidgetLayoutItem[];
+      };
       data.layout.widgets = packLayout(data.layout.widgets, 5, {}, [], true);
     }
 

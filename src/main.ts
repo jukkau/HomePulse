@@ -40,8 +40,7 @@ const {
   Plugin,
   PluginSettingTab,
   Setting,
-  setIcon,
-  normalizePath
+  setIcon
 } = require("obsidian");
 
 
@@ -703,7 +702,7 @@ class YukiHomepageView extends ItemView {
     let snapshot;
     try {
       snapshot = await this.plugin.loadSnapshot();
-    } catch (error) {
+    } catch {
       if (token !== this.renderToken || this.closed) return;
       container.querySelector(".yh-load-error")?.remove();
       const banner = container.createDiv({ cls: "yh-load-error", attr: { role: "alert" } });

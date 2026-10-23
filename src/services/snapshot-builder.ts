@@ -2,7 +2,6 @@ import { readTechTreeData } from "./tech-tree-reader";
 import { calculateObsidianUsageDays } from "./obsidian-usage";
 import { normalizeArray } from "../core/utils";
 import { localDateKey, reconcilePomodoroState } from "../widgets/widget-api";
-import { normalizePath } from "obsidian";
 import { matchesProjectFilter, type ProjectFilterDefaults } from "./project-filter";
 import { getTimeRange } from "./time/TimeAggregation";
 
@@ -12,12 +11,6 @@ function startOfWeek(date: Date): Date {
   copy.setDate(copy.getDate() - day + 1);
   copy.setHours(0, 0, 0, 0);
   return copy;
-}
-
-function withinFolder(path: string, folder: string): boolean {
-  const normalizedPath = normalizePath(path);
-  const normalizedFolder = normalizePath(folder).replace(/\/+$/, "");
-  return normalizedPath === normalizedFolder || normalizedPath.startsWith(`${normalizedFolder}/`);
 }
 
 function isDateBasename(name: string): boolean {

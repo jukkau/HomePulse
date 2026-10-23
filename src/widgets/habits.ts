@@ -11,21 +11,6 @@ function treeStage(done, total) {
   return Math.min(4, Math.ceil((done / total) * 4));
 }
 
-function renderTree(container, stage, compact = false) {
-  const tree = container.createDiv({
-    cls: `yh-tree-visual is-stage-${stage} ${compact ? "is-compact" : ""}`,
-    attr: { "aria-hidden": "true" }
-  });
-  tree.createDiv({ cls: "yh-tree-seed" });
-  tree.createDiv({ cls: "yh-tree-trunk" });
-  const crown = tree.createDiv({ cls: "yh-tree-crown" });
-  crown.createSpan();
-  crown.createSpan();
-  crown.createSpan();
-  tree.createDiv({ cls: "yh-tree-ground" });
-  return tree;
-}
-
 function recordedYears(completions, currentYear) {
   const years = new Set([currentYear]);
   for (const key of Object.keys(completions || {})) {
@@ -113,7 +98,7 @@ class HabitForestModal extends Modal {
           month.textContent = item.date.toLocaleDateString(this.language === "zh-CN" ? "zh-CN" : "en-US", { month: "short" });
           lastMonth = item.date.getMonth();
         }
-        const rect = createSvg(svg, "rect", {
+        createSvg(svg, "rect", {
           x,
           y,
           width: cell,

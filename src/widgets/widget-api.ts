@@ -13,8 +13,9 @@ export function localDateKey(date: Date): string {
 }
 
 export function countDistinctCompletionDays(completions: LooseValue): number {
-  const days = new Set();
-  for (const [key, completed] of Object.entries(completions || {})) {
+  const days = new Set<string>();
+  const entries = completions && typeof completions === "object" ? (completions as Record<string, unknown>) : {};
+  for (const [key, completed] of Object.entries(entries)) {
     if (!completed) continue;
     const separator = key.lastIndexOf("|");
     const dateKey = separator >= 0 ? key.slice(separator + 1) : "";
@@ -64,7 +65,7 @@ export function formatSeconds(total: LooseValue): string {
 }
 
 export function renderEmpty(container: LooseValue, text: string, action?: { label: string; run: () => void }): void {
-  const empty = container.createDiv({ cls: "yh-empty" });
+  const empty = (container as HTMLElement).createDiv({ cls: "yh-empty" });
   empty.createDiv({ cls: "yh-empty-title", text });
   if (action) empty.createEl("button", { text: action.label }).addEventListener("click", action.run);
 }

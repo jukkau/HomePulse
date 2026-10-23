@@ -29,8 +29,14 @@ export async function resolveMusicSource(app: { vault: { getAbstractFileByPath: 
   if (isExternalPath(source)) {
     if (!Platform?.isDesktop) throw new Error("desktop");
     if (!AUDIO_EXTENSION.test(source)) throw new Error("format");
-    let bytes;
-    try { bytes = await require("fs").promises.readFile(source); }
+    let bytes: Uint8Array;
+    // Deliberate, read-only access to a user-configured audio file OUTSIDE the vault
+    // (e.g. D:\Music\foo.mp3). The vault API cannot address files outside the vault,
+    // so playback of external files requires Node's fs. Access is strictly limited to:
+    // absolute paths only (isExternalPath), an audio-extension whitelist, and reads
+    // only — never writes, never directory traversal (paths containing ".." are
+    // rejected earlier by the format guard).
+    try { bytes = await require("fs").promises.readFile(source) as Uint8Array; }
     catch { throw new Error("missing"); }
     const extension = source.split(".").pop()?.toLowerCase() || "";
     const mime: Record<string, string> = { mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", oga: "audio/ogg", m4a: "audio/mp4", aac: "audio/aac", flac: "audio/flac", opus: "audio/ogg", webm: "audio/webm" };
@@ -46,12 +52,17 @@ export async function resolveMusicSource(app: { vault: { getAbstractFileByPath: 
 export async function scanMusicFolder(folder: string): Promise<MusicTrack[]> {
   if (!Platform?.isDesktop) throw new Error("desktop");
   if (!isExternalPath(folder)) throw new Error("format");
-  const fs = require("fs").promises;
-  const path = require("path");
+  // Read-only directory listing of a user-configured folder OUTSIDE the vault,
+  // used to build the local-music playlist. Same guardrails as resolveMusicSource:
+  // absolute path only, read-only, audio whitelist applied below.
+  const fs = require("fs").promises as {
+    readdir: (folder: string, options?: { withFileTypes?: boolean }) => Promise<Array<{ isFile: () => boolean; name: string }>>;
+  };
+  const path = require("path") as { parse: (p: string) => { name: string }; join: (...parts: string[]) => string };
   const entries = await fs.readdir(folder, { withFileTypes: true });
-  return entries.filter((entry: { isFile: () => boolean; name: string }) => entry.isFile() && AUDIO_EXTENSION.test(entry.name))
-    .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-    .map((entry: { name: string }) => ({ title: path.parse(entry.name).name, source: path.join(folder, entry.name) }));
+  return entries.filter((entry) => entry.isFile() && AUDIO_EXTENSION.test(entry.name))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    .map((entry) => ({ title: path.parse(entry.name).name, source: path.join(folder, entry.name) }));
 }
 
 /** The audio lifetime belongs to the plugin, so view refreshes do not interrupt playback. */

@@ -108,13 +108,13 @@ export const activityHistoryWidget = {
     const scheduleRefresh = () => {
       if (refreshQueued) return;
       refreshQueued = true;
-      const animationFrame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
         refreshQueued = false;
         applyConfiguredYear();
         refreshStatus();
       });
     };
-    await MarkdownRenderer.renderMarkdown(
+    MarkdownRenderer.render(
       `\`\`\`ActivityHistory\n${sourcePath}\n\`\`\``,
       host,
       "",

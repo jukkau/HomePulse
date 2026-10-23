@@ -35,8 +35,9 @@ export function getSizeDimensions(preset: string): WidgetDimensions {
   return SIZE_PRESETS[preset] || LEGACY_SIZE_PRESETS[preset] || SIZE_PRESETS.W2H2;
 }
 
-export function isKnownSizePreset(preset: string): boolean {
-  return Boolean(SIZE_PRESETS[preset] || LEGACY_SIZE_PRESETS[preset]);
+export function isKnownSizePreset(preset: unknown): boolean {
+  const key = String(preset ?? "");
+  return Boolean(SIZE_PRESETS[key] || LEGACY_SIZE_PRESETS[key]);
 }
 
 export function applySizePreset<T extends WidgetLayoutItem>(widget: T, preset: string, columns: number): T {

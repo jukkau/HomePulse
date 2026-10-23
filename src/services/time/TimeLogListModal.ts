@@ -102,7 +102,7 @@ export class TimeLogListModal extends Modal {
         try {
           if (await this.onDelete(log.id)) new Notice(this.t("timeLogDeleted"));
           this.render();
-        } catch (error) {
+        } catch {
           new Notice(this.t("saveFailed"));
           remove.disabled = false;
         }
