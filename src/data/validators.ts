@@ -317,7 +317,7 @@ export function validateSettings(settings: LooseValue, defaults: LooseValue): Ho
   const raw = asPlainObject(settings, {});
   const rawAccent = asString(raw.accentColor, "");
   const explicitMode = raw.accentColorMode === "custom" || raw.accentColorMode === "theme"
-    ? String(raw.accentColorMode)
+    ? raw.accentColorMode
     : null;
   const accentColorMode = explicitMode || (HEX_COLOR.test(rawAccent) && rawAccent.toLowerCase() !== "#f5c2e7" ? "custom" : "theme");
   return {

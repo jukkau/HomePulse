@@ -71,29 +71,32 @@ function migrateV0ToV1(raw: MigrationData): MigrationData {
 
   if (isPlainObject(raw.layout)) {
     const layout = raw.layout as Record<string, unknown>;
-    next.layout = {};
+    const layoutNext: Record<string, unknown> = {};
     if (layout.columns !== undefined) {
-      next.layout.columns = layout.columns as unknown;
+      layoutNext.columns = layout.columns;
     }
     if (Array.isArray(layout.widgets)) {
-      next.layout.widgets = (layout.widgets as unknown[]).slice();
+      layoutNext.widgets = (layout.widgets as unknown[]).slice();
     }
+    next.layout = layoutNext;
   }
 
   if (isPlainObject(raw.widgets)) {
     const widgetEntries = raw.widgets as Record<string, unknown>;
-    next.widgets = {};
+    const widgetsNext: Record<string, unknown> = {};
     for (const id of Object.keys(widgetEntries)) {
       const slot = widgetEntries[id];
       if (!isPlainObject(slot)) {
-        next.widgets[id] = { config: {}, state: {} };
+        widgetsNext[id] = { config: {}, state: {} };
         continue;
       }
-      next.widgets[id] = {
-        config: isPlainObject(slot.config) ? { ...(slot.config as Record<string, unknown>) } : {},
-        state: isPlainObject(slot.state) ? { ...(slot.state as Record<string, unknown>) } : {}
+      const slotMap = slot as Record<string, unknown>;
+      widgetsNext[id] = {
+        config: isPlainObject(slotMap.config) ? { ...(slotMap.config as Record<string, unknown>) } : {},
+        state: isPlainObject(slotMap.state) ? { ...(slotMap.state as Record<string, unknown>) } : {}
       };
     }
+    next.widgets = widgetsNext;
   }
 
   return next;
@@ -124,7 +127,8 @@ function migrateV2ToV3(raw: MigrationData): MigrationData {
     schemaVersion: 3
   };
   const legacyProjectRoot = "10_Projects/进行中";
-  const layoutWidgets = Array.isArray(next.layout?.widgets) ? (next.layout.widgets as unknown[]) : [];
+  const layoutObj = isPlainObject(next.layout) ? (next.layout as Record<string, unknown>) : null;
+  const layoutWidgets = Array.isArray(layoutObj?.widgets) ? (layoutObj.widgets as unknown[]) : [];
   const techTreeIds = new Set<string>(
     layoutWidgets
       .filter((widget) => {
@@ -133,14 +137,14 @@ function migrateV2ToV3(raw: MigrationData): MigrationData {
       })
       .map((widget) => String((widget as Record<string, unknown>).id))
   );
-  const settings = isPlainObject(next.settings) ? (next.settings as Record<string, unknown>) : {};
-  const globalProjectRoot = String(settings.techTreeActiveProjectRoot || "").trim();
+  const settingsObj = isPlainObject(next.settings) ? (next.settings as Record<string, unknown>) : {};
+  const globalProjectRoot = String(settingsObj.techTreeActiveProjectRoot || "").trim();
   const shouldInheritLegacyFolder = (next.initialized !== true)
     || Boolean(globalProjectRoot && globalProjectRoot !== legacyProjectRoot);
 
   if (isPlainObject(next.widgets)) {
     const widgetMap = next.widgets as Record<string, unknown>;
-    next.widgets = { ...widgetMap };
+    const widgetsNext: Record<string, unknown> = { ...widgetMap };
     for (const id of techTreeIds) {
       const slot = widgetMap[id];
       if (!isPlainObject(slot)) continue;
@@ -157,14 +161,16 @@ function migrateV2ToV3(raw: MigrationData): MigrationData {
         delete config.activeProjectRoot;
         config.projectFolders = [];
       }
-      next.widgets[id] = { ...slotMap, config };
+      widgetsNext[id] = { ...slotMap, config };
     }
+    next.widgets = widgetsNext;
   }
 
   if (next.initialized !== true && isPlainObject(next.settings)) {
-    next.settings = { ...(next.settings as Record<string, unknown>) };
-    if (next.settings.techTreeAreaRoot === "20_Areas") next.settings.techTreeAreaRoot = "Areas";
-    if (next.settings.techTreeActiveProjectRoot === legacyProjectRoot) next.settings.techTreeActiveProjectRoot = "Projects";
+    const settings = next.settings as Record<string, unknown>;
+    if (settings.techTreeAreaRoot === "20_Areas") settings.techTreeAreaRoot = "Areas";
+    if (settings.techTreeActiveProjectRoot === legacyProjectRoot) settings.techTreeActiveProjectRoot = "Projects";
+    next.settings = settings;
   }
 
   return next;

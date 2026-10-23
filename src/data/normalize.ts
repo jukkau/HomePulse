@@ -72,7 +72,8 @@ function validateAndFillDefaults(migrated: LooseValue, deps: NormalizeDeps): Plu
 function normalizeLayout(rawLayout: LooseValue, fallbackLayout: LooseValue, deps: NormalizeDeps): HomepageLayout {
   const raw = (rawLayout && typeof rawLayout === "object" ? rawLayout : fallbackLayout) as Record<string, unknown> | null;
   const fallback = (fallbackLayout && typeof fallbackLayout === "object" ? fallbackLayout : {}) as Record<string, unknown>;
-  const columns = clampLayoutColumns(raw?.columns ?? fallback.columns, fallback.columns || 5);
+  const fallbackColumns = typeof fallback.columns === "number" ? fallback.columns : 5;
+  const columns = clampLayoutColumns(raw?.columns ?? fallbackColumns, fallbackColumns);
   const rawWidgets = deps.normalizeArray(
     raw?.widgets ?? fallback.widgets,
     Array.isArray(fallback.widgets) ? fallback.widgets : []
@@ -109,7 +110,7 @@ function normalizeLayoutPresets(data: LooseValue, deps: NormalizeDeps): Homepage
     id: preset.id,
     name: preset.name,
     isBuiltIn: true,
-    updatedAt: Number(preset.updatedAt) || 0,
+    updatedAt: Number((preset as Record<string, unknown>).updatedAt) || 0,
     layout: normalizeLayout(preset.layout, DEFAULT_DATA.layout, deps)
   }));
   const seen = new Set<string>(builtIn.map((preset) => preset.id));
