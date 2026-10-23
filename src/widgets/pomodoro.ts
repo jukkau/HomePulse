@@ -252,7 +252,6 @@ export const pomodoroWidget = {
     setIcon(changeTargetBtn, "arrow-right-left");
     for (const [button, key] of [[resetBtn, "resetTimer"], [addTimeBtn, "recordTime"], [logBtn, "timeLog"], [settingsBtn, "pomodoroSettings"], [changeTargetBtn, "changeFocusTarget"]]) {
       button.setAttribute("aria-label", t(api.language, key));
-      button.setAttribute("title", t(api.language, key));
     }
     const count = timer.createDiv({ cls: "yh-pomo-count" });
     let isUpdating = false;
@@ -286,7 +285,6 @@ export const pomodoroWidget = {
       const isActive = computed.status === "running" || computed.status === "break";
       setIcon(startBtn, isActive ? "pause" : "play");
       startBtn.setAttribute("aria-label", t(api.language, isActive ? "pauseTimer" : "startTimer"));
-      startBtn.setAttribute("title", startBtn.getAttribute("aria-label"));
 
       } finally {
         isUpdating = false;

@@ -66,6 +66,7 @@ export class MusicSession {
   private listeners = new Set<() => void>();
   private resource?: ResolvedAudio;
   private generation = 0;
+  private requestedPlayback = false;
   private disposed = false;
   private handlers: Array<[string, () => void]> = [];
   constructor(readonly audio: HTMLAudioElement, private resolve: (source: string) => Promise<ResolvedAudio>) {
@@ -89,7 +90,7 @@ export class MusicSession {
     if (JSON.stringify(tracks) !== JSON.stringify(this.tracks)) {
       this.tracks = tracks;
       if (next >= 0) this.index = next;
-      else { this.generation++; this.audio.pause(); this.audio.removeAttribute("src"); this.audio.load(); this.resource?.release?.(); this.resource = undefined; this.index = 0; this.error = ""; this.loading = false; }
+      else { this.generation++; this.requestedPlayback = false; this.audio.pause(); this.audio.removeAttribute("src"); this.audio.load(); this.resource?.release?.(); this.resource = undefined; this.index = 0; this.error = ""; this.loading = false; }
     }
     if (rebuildOrder) this.buildOrder();
     this.audio.volume = Math.max(0, Math.min(1, volume)); this.loopPlaylist = loopPlaylist; this.emit();
@@ -105,7 +106,7 @@ export class MusicSession {
       this.order = this.tracks.length ? [this.index, ...rest] : [];
     }
   }
-  async next(play = !this.audio.paused): Promise<void> {
+  async next(play = this.requestedPlayback || !this.audio.paused): Promise<void> {
     if (!this.tracks.length) return;
     let position = this.order.indexOf(this.index) + 1;
     if (position >= this.order.length) { this.buildOrder(); position = this.playMode === "shuffle" && this.order.length > 1 ? 1 : 0; }
@@ -116,9 +117,10 @@ export class MusicSession {
     const position = this.order.indexOf(this.index);
     await this.select(this.order[(position - 1 + this.order.length) % this.order.length]);
   }
-  async select(index: number, play = !this.audio.paused): Promise<void> {
+  async select(index: number, play = this.requestedPlayback || !this.audio.paused): Promise<void> {
     if (!this.tracks.length || this.disposed) return;
     const generation = ++this.generation;
+    this.requestedPlayback = play;
     this.audio.pause(); this.index = (index + this.tracks.length) % this.tracks.length;
     this.loading = true; this.error = ""; this.emit();
     try {
@@ -133,15 +135,16 @@ export class MusicSession {
   }
   async toggle(): Promise<void> {
     if (this.loading) return;
-    if (!this.audio.paused) { this.audio.pause(); return; }
+    if (!this.audio.paused) { this.requestedPlayback = false; this.audio.pause(); return; }
     if (!this.resource || this.error) { await this.select(this.index, true); return; }
+    this.requestedPlayback = true;
     try { await this.audio.play(); this.error = ""; } catch { this.error = "playback"; } this.emit();
   }
   seek(seconds: number): void {
     if (Number.isFinite(this.audio.duration) && this.audio.duration > 0) this.audio.currentTime = Math.max(0, Math.min(seconds, this.audio.duration));
   }
   dispose(): void {
-    this.disposed = true; this.generation++; this.audio.pause();
+    this.disposed = true; this.generation++; this.requestedPlayback = false; this.audio.pause();
     for (const [event, handler] of this.handlers) this.audio.removeEventListener(event, handler);
     this.audio.removeAttribute("src"); this.audio.load(); this.resource?.release?.(); this.listeners.clear();
   }

@@ -73,8 +73,8 @@ function renderEmptyHeatmap(host, year, language) {
       cell.setAttribute("y", String(top + day * step));
       cell.setAttribute("width", "7");
       cell.setAttribute("height", "7");
-      const seed = (Number(year) * 13 + week * 37 + day * 17) % 100;
-      const level = seed < 56 ? 0 : seed < 76 ? 1 : seed < 90 ? 2 : seed < 98 ? 3 : 4;
+      // No source records means an empty grid, never generated activity.
+      const level = 0;
       cell.setAttribute("data-value", String(level));
       cell.classList.add(`is-level-${level}`);
       cell.setAttribute("aria-hidden", "true");

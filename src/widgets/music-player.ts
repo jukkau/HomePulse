@@ -103,7 +103,9 @@ export const musicPlayerWidget = {
       setIcon(mode, shuffled ? "shuffle" : "list-music");
       mode.setAttribute("aria-label", `${t(api.language, "musicMode")}: ${t(api.language, shuffled ? "musicShuffle" : "musicSequential")}`);
       mode.setAttribute("aria-pressed", String(shuffled));
-      play.disabled = session.loading; previous.disabled = next.disabled = session.loading || tracks.length < 2;
+      play.disabled = session.loading;
+      // File reads and play() can stay pending; users must still be able to skip.
+      previous.disabled = next.disabled = session.tracks.length < 2;
       const duration = Number.isFinite(session.audio.duration) ? session.audio.duration : 0;
       position.max = String(duration); position.value = String(session.audio.currentTime || 0); position.disabled = !duration;
       elapsed.setText(time(session.audio.currentTime));

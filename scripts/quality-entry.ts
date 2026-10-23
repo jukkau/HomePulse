@@ -266,6 +266,40 @@ async function run() {
   check(parseMusicTracks(widgetConfig.tracks).length === 1 && widgetSession.audio.src === "C:/Music/two.mp3" && !widgetSession.audio.paused, "deleting current track only removes its entry and continues with remaining track");
   widgetSession.dispose();
 
+  // A real audio play() promise may remain pending while decoding/buffering.
+  // Track navigation must stay enabled and preserve the requested play intent.
+  let finishPendingPlay;
+  class PendingPlayAudio extends AudioDouble {
+    calls = 0;
+    play() {
+      this.calls++;
+      if (this.calls === 1) return new Promise((resolve) => { finishPendingPlay = resolve; });
+      return super.play();
+    }
+  }
+  const waitingAudio = new PendingPlayAudio();
+  const waitingSession = new MusicSession(waitingAudio, async (source) => ({ url: source }));
+  const waitingRoot = new Element();
+  const waitingConfig = { tracks: "First | C:/Music/first.wav\nSecond | C:/Music/second.wav", playMode: "sequential" };
+  await musicPlayerWidget.render(waitingRoot, { language: "en", widgetData: { config: waitingConfig }, getMusicSession: () => waitingSession,
+    getState: () => ({}), getConfig: () => waitingConfig, component: { register() {} }, openSettings() {},
+    saveConfig: async () => {}, saveState: async () => {} });
+  const waitingNext = descendants(waitingRoot).find((el) => el.attributes["aria-label"] === "Next track");
+  const waitingPrevious = descendants(waitingRoot).find((el) => el.attributes["aria-label"] === "Previous track");
+  const pendingStart = waitingSession.select(0, true);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  check(waitingSession.loading && !waitingNext.disabled && !waitingPrevious.disabled, "two-track navigation stays clickable while play promise is pending");
+  await waitingNext.click(); await new Promise((resolve) => setTimeout(resolve, 0));
+  check(waitingSession.index === 1 && waitingAudio.src === "C:/Music/second.wav" && !waitingAudio.paused, "click next skips the stalled track and continues playback");
+  check(descendants(waitingRoot).find((el) => el.cls === "yh-music-current-track").textContent === "Second", "next button updates current title while first play is unresolved");
+  finishPendingPlay(); await pendingStart;
+  check(waitingSession.index === 1 && !waitingSession.loading && !waitingSession.error, "late first play completion cannot overwrite the new track");
+  // Pausing and then skipping keeps pause, rather than reviving old play intent.
+  await waitingSession.toggle();
+  await waitingPrevious.click(); await new Promise((resolve) => setTimeout(resolve, 0));
+  check(waitingSession.index === 0 && waitingAudio.paused, "skip after an explicit pause keeps playback paused");
+  waitingSession.dispose();
+
   // Drive the real view render path with tiny host controls, without launching Obsidian.
   const app = {
     vault: { on: () => ({}), getMarkdownFiles: () => [], getAbstractFileByPath: () => null },

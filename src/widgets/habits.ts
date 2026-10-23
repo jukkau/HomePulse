@@ -284,7 +284,7 @@ export const habitsWidget = {
         const row = list.createDiv({ cls: `yh-habit-today-row ${isDone ? "is-done" : ""}` });
         const check = row.createEl("button", {
           cls: "yh-habit-today-check",
-          text: isDone ? "✓" : ""
+          text: isDone ? "✓" : "", attr: { "aria-label": habit, "aria-pressed": String(isDone) }
         });
         const name = row.createEl("button", {
           cls: "yh-habit-today-name",
@@ -315,10 +315,10 @@ export const habitsWidget = {
 
     const footer = today.createDiv({ cls: "yh-habit-footer" });
     const addBtn = footer.createEl("button", {
-      cls: "yh-habit-footer-icon"
+      cls: "yh-habit-footer-icon", attr: { "aria-label": t(api.language, "add") }
     });
     const forestBtn = footer.createEl("button", {
-      cls: "yh-habit-footer-icon"
+      cls: "yh-habit-footer-icon", attr: { "aria-label": t(api.language, "habits") }
     });
     setIcon(addBtn, "plus");
     setIcon(forestBtn, "trees");

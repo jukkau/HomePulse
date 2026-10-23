@@ -96,7 +96,7 @@ export const bookmarksWidget = {
     const grid = container.createDiv({ cls: `yh-action-grid is-${variant}` });
     for (const item of items) {
       const button = grid.createEl("button", {
-        cls: `yh-action-btn ${variant === "compact" ? "is-compact" : ""}`
+        cls: `yh-action-btn ${variant === "compact" ? "is-compact" : ""}`, attr: { title: item.label || t(api.language, "bookmarks") }
       });
       renderBookmarkIcon(button, item, useFavicons);
       button.createDiv({ cls: "yh-action-label", text: item.label || t(api.language, "bookmarks") });

@@ -40,6 +40,7 @@ const {
   Plugin,
   PluginSettingTab,
   Setting,
+  setIcon,
   normalizePath
 } = require("obsidian");
 
@@ -749,8 +750,10 @@ class YukiHomepageView extends ItemView {
     const periodEl = periodRow.createDiv({ cls: "yh-period" });
     const configBtn = periodRow.createEl("button", {
       cls: `yh-header-config-btn ${this.editMode ? "is-active" : ""}`,
-      text: `⚙ ${this.plugin.t(this.editMode ? "editing" : "config")}`
+      attr: { "aria-label": this.plugin.t(this.editMode ? "editing" : "config") }
     });
+    setIcon(configBtn.createSpan({ attr: { "aria-hidden": "true" } }), "settings");
+    configBtn.createSpan({ text: this.plugin.t(this.editMode ? "editing" : "config") });
     const dateEl = rightHdr.createDiv({ cls: "yh-date" });
 
     configBtn.addEventListener("click", async () => {
@@ -939,12 +942,14 @@ class YukiHomepageView extends ItemView {
         }
         const settingsBtn = controls.createEl("button", {
           cls: "yh-icon-btn",
-          text: "⚙", attr: { "aria-label": this.plugin.t("configureWidget") }
+          attr: { "aria-label": this.plugin.t("configureWidget") }
         });
+        setIcon(settingsBtn, "settings");
         const removeBtn = controls.createEl("button", {
           cls: "yh-icon-btn danger",
-          text: "×", attr: { "aria-label": this.plugin.t("removeWidget") }
+          attr: { "aria-label": this.plugin.t("removeWidget") }
         });
+        setIcon(removeBtn, "x");
         widthSelect.addEventListener("click", (event) => {
           event.stopPropagation();
         });
