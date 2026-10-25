@@ -3,7 +3,7 @@ export type HomepageLanguage = "zh-CN" | "en";
 const EN = {
   musicSubtitle: "Play your favorite sounds",
   musicFolder: "Music folder", musicFolderDesc: "Enter a full computer folder path, then generate the playlist. Reads audio files directly in this folder, ordered by filename; replaces the current draft list. Files are never deleted.",
-  musicGeneratePlaylist: "Generate playlist", musicScanFolder: "Read", musicScanDone: "{count} tracks", musicScanEmpty: "No supported audio files found in this folder.", musicScanFailed: "Cannot read this folder. Check its full path and access permissions.",
+  musicGeneratePlaylist: "Generate playlist", musicBrowseFolder: "Browse", musicFolderSelected: "Folder selected. Read it to generate the playlist.", musicScanFolder: "Read", musicScanDone: "{count} tracks", musicScanEmpty: "No supported audio files found in this folder.", musicScanFailed: "Cannot read this folder. Check its full path and access permissions.",
   musicMode: "Playback order", musicSequential: "Sequential", musicShuffle: "Shuffle", musicRemoveTrack: "Remove from playlist",
   musicOpenNetEase: "Open NetEase Cloud Music in browser", musicOpenQQ: "Open QQ Music in browser",
 
@@ -355,7 +355,7 @@ const EN = {
 const ZH: Partial<Record<keyof typeof EN, string>> = {
   musicSubtitle: "播放喜欢的声音",
   musicFolder: "电脑音乐文件夹", musicFolderDesc: "填写电脑文件夹完整路径，再生成播放列表。仅读取该文件夹内的音频，按文件名排序，替换当前草稿列表；不会删除音乐文件。",
-  musicGeneratePlaylist: "生成播放列表", musicScanFolder: "读取", musicScanDone: "{count} 首", musicScanEmpty: "此文件夹中没有支持的音频文件。", musicScanFailed: "无法读取文件夹，请检查完整路径与访问权限。",
+  musicGeneratePlaylist: "生成播放列表", musicBrowseFolder: "浏览", musicFolderSelected: "已选择文件夹，读取后将生成播放列表。", musicScanFolder: "读取", musicScanDone: "{count} 首", musicScanEmpty: "此文件夹中没有支持的音频文件。", musicScanFailed: "无法读取文件夹，请检查完整路径与访问权限。",
   musicMode: "播放顺序", musicSequential: "顺序播放", musicShuffle: "随机播放", musicRemoveTrack: "从列表移除",
   musicOpenNetEase: "在浏览器打开网易云音乐", musicOpenQQ: "在浏览器打开 QQ 音乐",
 

@@ -10,22 +10,42 @@ function time(seconds) {
   const value = Math.max(0, Math.floor(Number(seconds) || 0));
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, "0")}`;
 }
+
+function chooseSystemFolder() {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.setAttribute("webkitdirectory", "");
+    input.setAttribute("directory", "");
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      const absolutePath = String(file?.path || "");
+      const relativePath = String(file?.webkitRelativePath || "");
+      if (!absolutePath || !relativePath) return resolve("");
+      resolve(absolutePath.slice(0, Math.max(0, absolutePath.length - relativePath.length)).replace(/[\\/]$/, ""));
+    }, { once: true });
+    input.click();
+  });
+}
+
 export const musicPlayerWidget = {
   type: "music-player", displayName: "Music Player", shell: "panel", allowedSizes: ALL_SIZE_PRESETS,
   defaultSize: { preset: "W2H2", w: 2, h: 2 },
-  defaultConfig: { title: "music player", tracks: "", musicFolder: "", playMode: "sequential", volume: 0.7, loopPlaylist: true,
+  defaultConfig: { title: "music player", tracks: "", musicFolder: "", playMode: "sequential", loopPlaylist: true,
     serviceName: "NetEase Cloud Music", loginUrl: "https://music.163.com/", playUrl: "https://music.163.com/" },
   defaultState: {},
   normalizeConfig(config, state) {
-    if (config._volumeChanged) state.volume = config.volume;
+    delete config.volume;
     delete config._volumeChanged;
+    delete state.volume;
     return { config, state };
   },
   async render(container, api) {
     const config = api.widgetData.config;
     const tracks = parseMusicTracks(config.tracks || "");
     const session = api.getMusicSession();
-    session.configure(tracks, Number(api.getState().volume ?? config.volume ?? 0.7), config.loopPlaylist !== false, config.playMode === "shuffle" ? "shuffle" : "sequential");
+    session.configure(tracks, config.loopPlaylist !== false, config.playMode === "shuffle" ? "shuffle" : "sequential");
     const root = container.createDiv({ cls: "yh-music-player" });
     const heading = root.createDiv({ cls: "yh-music-player-heading" });
     heading.createDiv({ cls: "yh-card-title", text: widgetTitle(api.language, "music-player", config.title, "Music Player") });
@@ -68,11 +88,6 @@ export const musicPlayerWidget = {
     const position = bottom.createEl("input", { type: "range", attr: { min: "0", max: "0", step: "1", "aria-label": t(api.language, "musicPosition") } });
     position.addEventListener("input", () => session.seek(Number(position.value)));
     const durationText = bottom.createSpan({ cls: "yh-music-elapsed" });
-    const volumeWrap = bottom.createDiv({ cls: "yh-music-volume-row" });
-    setIcon(volumeWrap.createSpan({ attr: { "aria-hidden": "true" } }), "volume-2");
-    const volume = volumeWrap.createEl("input", { type: "range", attr: { min: "0", max: "1", step: "0.01", "aria-label": t(api.language, "musicVolume") } });
-    volume.addEventListener("input", () => { session.audio.volume = Number(volume.value); });
-    volume.addEventListener("change", () => void api.saveState({ volume: Number(volume.value) }, false));
     const playlist = root.createEl("details", { cls: "yh-music-playlist" });
     playlist.createEl("summary", { text: `${t(api.language, "musicPlaylist")} · ${tracks.length}` });
     const rows = [];
@@ -110,7 +125,6 @@ export const musicPlayerWidget = {
       position.max = String(duration); position.value = String(session.audio.currentTime || 0); position.disabled = !duration;
       elapsed.setText(time(session.audio.currentTime));
       durationText.setText(time(duration));
-      volume.value = String(session.audio.volume);
       const keys = { share: "musicShareUnsupported", desktop: "musicDesktopOnly", format: "musicFormatError", missing: "musicMissing", playback: "musicPlaybackError" };
       error.setText(session.error ? t(api.language, keys[session.error] || "musicPlaybackError") : "");
       error.hidden = !session.error;
@@ -122,7 +136,9 @@ export const musicPlayerWidget = {
       text.setValue(draft.title || ""); text.onChange((value) => { draft.title = value; });
     });
     const folderSetting = new Setting(container).setName(t(ctx.language, "musicFolder"));
+    let folderInput;
     folderSetting.addText((text) => {
+      folderInput = text;
       text.setValue(draft.musicFolder || "");
       text.setPlaceholder(String.raw`D:\Music`);
       text.inputEl.setAttribute("aria-label", t(ctx.language, "musicFolder"));
@@ -130,6 +146,17 @@ export const musicPlayerWidget = {
         const path = value.trim();
         if (path !== draft.musicFolder) draft.tracks = "";
         draft.musicFolder = path;
+      });
+    }).addButton((button) => {
+      button.setButtonText(t(ctx.language, "musicBrowseFolder"));
+      button.setDisabled(!Platform?.isDesktop);
+      button.onClick(async () => {
+        const folder = await chooseSystemFolder();
+        if (!folder) return;
+        if (folder !== draft.musicFolder) draft.tracks = "";
+        draft.musicFolder = folder;
+        folderInput?.setValue(folder);
+        folderSetting.setDesc(t(ctx.language, "musicFolderSelected"));
       });
     }).addButton((button) => {
       button.setButtonText(t(ctx.language, "musicScanFolder"));
@@ -153,10 +180,6 @@ export const musicPlayerWidget = {
     });
     new Setting(container).setName(t(ctx.language, "musicLoop")).addToggle((toggle) => {
       toggle.setValue(draft.loopPlaylist !== false); toggle.onChange((value) => { draft.loopPlaylist = value; });
-    });
-    new Setting(container).setName(t(ctx.language, "musicVolume")).addSlider((slider) => {
-      slider.setLimits(0, 100, 1).setValue(Math.round(Number(draft.volume ?? 0.7) * 100)).setDynamicTooltip();
-      slider.onChange((value) => { draft.volume = value / 100; draft._volumeChanged = true; });
     });
   }
 };

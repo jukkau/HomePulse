@@ -201,10 +201,10 @@ async function run() {
   } finally { if (fs.existsSync(musicTestFile)) fs.unlinkSync(musicTestFile); fs.rmdirSync(musicTestDir); }
   const audio = new AudioDouble(); let released = 0;
   const music = new MusicSession(audio, async (source) => { if (source === "missing") throw Error("missing"); return { url: source, release: () => released++ }; });
-  music.configure(musicTracks, 0.5);
-  check(audio.volume === 0.5 && audio.paused, "music does not autoplay when configured");
+  music.configure(musicTracks);
+  check(audio.volume === 1 && audio.paused, "music uses the operating system volume and does not autoplay when configured");
   await music.toggle(); check(!audio.paused && audio.src === musicTracks[0].source, "music plays selected external source via resolver");
-  audio.currentTime = 40; music.configure(musicTracks, 0.5);
+  audio.currentTime = 40; music.configure(musicTracks);
   check(!audio.paused && audio.currentTime === 40, "same configuration preserves playback across view refresh");
   await music.select(1); check(!audio.paused && music.index === 1 && released === 1, "next track preserves playing state and releases previous resource");
   await music.toggle(); check(audio.paused, "play control pauses audio");
@@ -230,14 +230,14 @@ async function run() {
   const shuffleAudio = new AudioDouble();
   const shuffled = new MusicSession(shuffleAudio, async (source) => ({ url: source }));
   const sixTracks = Array.from({ length: 6 }, (_, index) => ({ title: String(index), source: String(index) }));
-  shuffled.configure(sixTracks, 0.7, true, "shuffle");
+  shuffled.configure(sixTracks, true, "shuffle");
   const visits = [shuffled.index];
   for (let i = 0; i < 5; i++) { await shuffled.next(true); visits.push(shuffled.index); }
   check(new Set(visits).size === 6, "shuffle visits every track before repeating");
   const lastShuffle = shuffled.index; await shuffled.next(true);
   check(shuffled.index !== lastShuffle, "shuffle avoids immediate repeats across cycles");
   const sourceBefore = shuffleAudio.src;
-  shuffled.configure(sixTracks, 0.7, false, "sequential");
+  shuffled.configure(sixTracks, false, "sequential");
   check(shuffleAudio.src === sourceBefore && !shuffleAudio.paused, "mode switch preserves current playback");
   await shuffled.select(0, true); await shuffled.next(); check(shuffled.index === 1, "sequential next follows playlist order");
   await shuffled.previous(); check(shuffled.index === 0, "previous follows playback order");
@@ -251,7 +251,7 @@ async function run() {
   const openedSites = []; window.open = (url) => openedSites.push(url);
   await musicPlayerWidget.render(musicRoot, { language: "en", widgetData: { config: widgetConfig }, getMusicSession: () => widgetSession,
     getState: () => ({}), getConfig: () => widgetConfig, component: { register() {} }, openSettings() {},
-    saveConfig: async (next) => { widgetConfig = next; widgetSession.configure(parseMusicTracks(next.tracks), 0.7, next.loopPlaylist !== false, next.playMode || "sequential"); }, saveState: async () => {} });
+    saveConfig: async (next) => { widgetConfig = next; widgetSession.configure(parseMusicTracks(next.tracks), next.loopPlaylist !== false, next.playMode || "sequential"); }, saveState: async () => {} });
   const iconButtons = descendants(musicRoot).filter((el) => el.tag === "button");
   await iconButtons.find((el) => el.attributes["aria-label"] === "Open NetEase Cloud Music in browser").click();
   await iconButtons.find((el) => el.attributes["aria-label"] === "Open QQ Music in browser").click();

@@ -230,7 +230,7 @@ export const pomodoroWidget = {
     const changeTargetBtn = targetRow.createEl("button", { cls: "yh-pomo-target-change" });
     const controls = timer.createDiv({ cls: "yh-pomo-controls" });
     const startBtn = controls.createEl("button", {
-      cls: "yh-pomo-btn yh-pomo-btn-primary"
+      cls: "yh-pomo-btn"
     });
     const resetBtn = controls.createEl("button", {
       cls: "yh-pomo-btn"

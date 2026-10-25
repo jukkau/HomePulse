@@ -114,7 +114,7 @@ export const activityHistoryWidget = {
         refreshStatus();
       });
     };
-    MarkdownRenderer.render(
+    await MarkdownRenderer.renderMarkdown(
       `\`\`\`ActivityHistory\n${sourcePath}\n\`\`\``,
       host,
       "",

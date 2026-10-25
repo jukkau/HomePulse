@@ -115,7 +115,7 @@ export function validateWidgetConfig(type: string, config: LooseValue, defaultCo
       next.musicFolder = asString(raw.musicFolder, "").trim();
       next.playMode = raw.playMode === "shuffle" ? "shuffle" : "sequential";
       next.tracks = asString(raw.tracks, base.tracks || "");
-      next.volume = clampNumber(raw.volume ?? base.volume, 0, 1, 0.7);
+      delete next.volume;
       next.loopPlaylist = (raw.loopPlaylist ?? base.loopPlaylist) !== false;
       next.title = asString(raw.title, base.title || "music player");
       next.serviceName = asString(raw.serviceName, base.serviceName || "NetEase Cloud Music").trim() || "NetEase Cloud Music";
@@ -250,7 +250,7 @@ export function validateWidgetState(type: string, state: LooseValue, defaultStat
 
   switch (type) {
     case "music-player":
-      return raw.volume == null ? {} : { volume: clampNumber(raw.volume, 0, 1, 0.7) };
+      return {};
     case "focus":
       return { text: asString(raw.text, base.text || "") };
 

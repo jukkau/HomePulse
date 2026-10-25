@@ -93,7 +93,7 @@ export class MusicSession {
   private listen(event: string, fn: () => void): void { this.audio.addEventListener(event, fn); this.handlers.push([event, fn]); }
   private emit(): void { for (const listener of this.listeners) listener(); }
   subscribe(fn: () => void): () => void { this.listeners.add(fn); fn(); return () => this.listeners.delete(fn); }
-  configure(tracks: MusicTrack[], volume = 0.7, loopPlaylist = true, playMode: "sequential" | "shuffle" = "sequential"): void {
+  configure(tracks: MusicTrack[], loopPlaylist = true, playMode: "sequential" | "shuffle" = "sequential"): void {
     const rebuildOrder = JSON.stringify(tracks) !== JSON.stringify(this.tracks) || this.playMode !== playMode;
     this.playMode = playMode;
     const source = this.tracks[this.index]?.source;
@@ -104,7 +104,9 @@ export class MusicSession {
       else { this.generation++; this.requestedPlayback = false; this.audio.pause(); this.audio.removeAttribute("src"); this.audio.load(); this.resource?.release?.(); this.resource = undefined; this.index = 0; this.error = ""; this.loading = false; }
     }
     if (rebuildOrder) this.buildOrder();
-    this.audio.volume = Math.max(0, Math.min(1, volume)); this.loopPlaylist = loopPlaylist; this.emit();
+    this.audio.volume = 1;
+    this.loopPlaylist = loopPlaylist;
+    this.emit();
   }
   private buildOrder(): void {
     this.order = this.tracks.map((_, index) => index);
